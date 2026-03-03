@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "clerkk-backend"
+version = "0.1.0"
+description = "Clerkk Backend API"
+authors = ["Clerkk Team"]
+readme = "README.md"
+packages = [{include = "clerkk_backend"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py313']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''

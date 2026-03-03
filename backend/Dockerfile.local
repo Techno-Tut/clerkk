@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies for WeasyPrint
+RUN apt-get update && apt-get install -y \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libpangoft2-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+RUN pip install poetry
+
+# Copy Poetry files
+COPY pyproject.toml poetry.lock* ./
+
+# Configure Poetry
+RUN poetry config virtualenvs.create false
+
+# Install dependencies (only production)
+RUN poetry install --only=main --no-root
+
+# Copy application code
+COPY clerkk_backend ./clerkk_backend
+COPY config ./config
+
+EXPOSE 8000
+
+CMD ["python", "-m", "uvicorn", "clerkk_backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

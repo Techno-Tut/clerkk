@@ -1,0 +1,39 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/.coverage
+
+# React Native
+clerkk/node_modules/
+clerkk/.expo/
+clerkk/dist/
+clerkk/.expo-shared/
+
+# iOS
+clerkk/ios/Pods/
+clerkk/ios/build/
+clerkk/ios/*.xcworkspace/xcuserdata/
+
+# Android
+clerkk/android/build/
+clerkk/android/.gradle/
+clerkk/android/app/build/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

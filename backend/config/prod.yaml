@@ -1,0 +1,24 @@
+# Development Configuration
+database:
+  url: postgresql://postgres:postgres@db:5432/inbriefs
+
+auth0:
+  domain: technotut.au.auth0.com
+  api_audience: https://api.inbriefs.com
+
+aws:
+  region: ap-south-1
+
+s3:
+  bucket_name: inbriefs-articles-prod
+  region: ap-south-1
+  prefix: test/
+
+cors:
+  allowed_origins:
+    - http://localhost:5173
+
+app:
+  environment: development
+  log_level: DEBUG
+  debug: true
