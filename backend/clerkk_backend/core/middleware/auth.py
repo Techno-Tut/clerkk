@@ -71,10 +71,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             # Look up user UUID via UserService
             user_uuid = self.user_service.get_user_uuid(auth0_id)
             if not user_uuid:
-                return JSONResponse(
-                    status_code=401,
-                    content={"message": "User not found", "code": "UNAUTHORIZED"},
-                )
+                # Auto-create user on first request (MVP)
+                user = self.user_service.create_user(auth0_id=auth0_id, email=email)
+                user_uuid = str(user.id)
 
             # Add user info to request state (with UUID, not auth0_id)
             request.state.current_user = {

@@ -1,27 +1,53 @@
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Alert,
+} from 'react-native';
 import {useRouter} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
 import {useAuth0} from 'react-native-auth0';
+import {useOnboarding} from '@/contexts/OnboardingContext';
+import {api} from '@/config/api';
+import {useState} from 'react';
 
 export default function SignUp() {
   const router = useRouter();
-  const {authorize} = useAuth0();
+  const {authorize, getCredentials} = useAuth0();
+  const {data, reset} = useOnboarding();
+  const [loading, setLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
+    if (loading) return;
+    setLoading(true);
+
     try {
       await authorize({
         customScheme: 'com.clerkk.app',
         scope: 'openid profile email',
         connection: 'google-oauth2',
+        audience: 'https://api.inbriefs.com',
       });
 
-      // After successful login, replace navigation stack
+      const creds = await getCredentials();
+
+      // Submit onboarding data
+      await api.user.submitOnboarding(data, creds.accessToken);
+
+      // Reset context and navigate
+      reset();
       router.replace('/dashboard');
     } catch (e: any) {
       if (e.code === 'USER_CANCELLED' || e.name === 'USER_CANCELLED') {
+        setLoading(false);
         return;
       }
       console.error('Login error:', e);
+      Alert.alert('Error', 'Failed to save your information');
+    } finally {
+      setLoading(false);
     }
   };
 

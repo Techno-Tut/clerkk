@@ -3,25 +3,40 @@ import {useRouter} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Button} from '@/components';
 import {useAuth0} from 'react-native-auth0';
+import {api} from '@/config/api';
+import {useState} from 'react';
 
 export default function Welcome() {
   const router = useRouter();
-  const {authorize, getCredentials, user} = useAuth0();
+  const {authorize, getCredentials} = useAuth0();
+  const [loading, setLoading] = useState(false);
 
   const handleGetStarted = () => {
     router.push('/onboarding/income');
   };
 
   const handleGoogleSignIn = async () => {
+    if (loading) return;
+    setLoading(true);
+
     try {
       await authorize({
         customScheme: 'com.clerkk.app',
         scope: 'openid profile email',
         connection: 'google-oauth2',
+        audience: 'https://api.inbriefs.com', // CRITICAL: Get JWT access token
       });
 
-      await getCredentials();
-      router.replace('/dashboard');
+      const creds = await getCredentials();
+
+      // Check onboarding status
+      const profile = await api.user.getProfile(creds.accessToken);
+
+      if (profile.onboarding_completed) {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/onboarding/income');
+      }
     } catch (e: any) {
       // User cancelled - just ignore
       if (e.code === 'USER_CANCELLED' || e.name === 'USER_CANCELLED') {
@@ -30,6 +45,8 @@ export default function Welcome() {
       }
       // Other errors - log them
       console.error('Login error:', e);
+    } finally {
+      setLoading(false);
     }
   };
 

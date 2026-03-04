@@ -8,21 +8,27 @@ import {
   TextInput,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {useAuth0} from 'react-native-auth0';
 import {useRouter, Stack} from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {api} from '../config/api';
+import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
+import Currency from '../components/Currency';
 
 export default function Home() {
-  const {user, clearSession, clearCredentials} = useAuth0();
+  const {user, clearSession, clearCredentials, getCredentials} = useAuth0();
   const router = useRouter();
   const firstName = user?.givenName || user?.name?.split(' ')[0] || 'there';
 
   const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
+  const [stats, setStats] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showContributeModal, setShowContributeModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
@@ -41,6 +47,24 @@ export default function Home() {
   const [paycheckAmount, setPaycheckAmount] = useState('');
   const [paycheckDate, setPaycheckDate] = useState('Today');
   const [paycheckSource, setPaycheckSource] = useState('');
+
+  useEffect(() => {
+    fetchStats();
+  }, [viewMode]);
+
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      const creds = await getCredentials();
+      const data = await api.dashboard.getStats(viewMode, creds.accessToken);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Artificial delay
+      setStats(data.stats);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -138,27 +162,86 @@ export default function Home() {
           </TouchableOpacity>
         </View>
       </View>
-      <Text style={styles.heroAmount}>
-        ${viewMode === 'monthly' ? '5,700' : '68,400'}
-      </Text>
-      <Text style={styles.heroSubtitle}>
-        Available this {viewMode === 'monthly' ? 'month' : 'year'}
-      </Text>
+      {isLoading ? (
+        <SkeletonPlaceholder backgroundColor="#1a1a1a" highlightColor="#2a2a2a">
+          <SkeletonPlaceholder.Item
+            width={200}
+            height={48}
+            marginTop={20}
+            alignSelf="center"
+          />
+        </SkeletonPlaceholder>
+      ) : (
+        <Currency amount={stats?.surplus || 0} style={styles.heroAmount} />
+      )}
+      {isLoading ? (
+        <SkeletonPlaceholder backgroundColor="#1a1a1a" highlightColor="#2a2a2a">
+          <SkeletonPlaceholder.Item
+            width={200}
+            height={16}
+            marginTop={8}
+            alignSelf="center"
+          />
+        </SkeletonPlaceholder>
+      ) : (
+        <Text style={styles.heroSubtitle}>
+          Out of{' '}
+          <Currency
+            amount={stats?.post_tax_income || 0}
+            style={styles.heroSubtitleBold}
+          />{' '}
+          after taxes this {viewMode === 'monthly' ? 'month' : 'year'}
+        </Text>
+      )}
       <View style={styles.heroFooter}>
         <View style={styles.heroFooterItem}>
-          <Text style={styles.footerLabel}>Est. Marginal Tax Rate</Text>
+          <Text style={styles.footerLabel}>Marginal Tax Rate</Text>
           <View style={styles.taxRateRow}>
-            <Text style={styles.footerValue}>$0.57</Text>
+            {isLoading ? (
+              <SkeletonPlaceholder
+                backgroundColor="#1a1a1a"
+                highlightColor="#2a2a2a"
+              >
+                <SkeletonPlaceholder.Item width={60} height={24} />
+              </SkeletonPlaceholder>
+            ) : (
+              <Text style={styles.footerValue}>
+                $
+                {stats?.marginal_tax_rate
+                  ? (1 - Number(stats.marginal_tax_rate) / 100).toFixed(2)
+                  : '0.00'}
+              </Text>
+            )}
             <Text style={styles.taxRateDivider}>/</Text>
             <Text style={styles.taxRateDollar}>$1</Text>
           </View>
-          <Text style={styles.footerSubtext}>43.41% tax rate</Text>
+          {isLoading ? (
+            <SkeletonPlaceholder
+              backgroundColor="#1a1a1a"
+              highlightColor="#2a2a2a"
+            >
+              <SkeletonPlaceholder.Item width={100} height={14} marginTop={4} />
+            </SkeletonPlaceholder>
+          ) : (
+            <Text style={styles.footerSubtext}>you keep per dollar earned</Text>
+          )}
         </View>
         <View style={styles.footerDivider} />
         <View style={styles.heroFooterItem}>
           <Text style={styles.footerLabel}>Income Ranking</Text>
-          <Text style={styles.footerValue}>Top 15%</Text>
-          <Text style={styles.footerSubtext}>in Canada (Stats Canada)</Text>
+          {isLoading ? (
+            <SkeletonPlaceholder
+              backgroundColor="#1a1a1a"
+              highlightColor="#2a2a2a"
+            >
+              <SkeletonPlaceholder.Item width={70} height={20} marginTop={4} />
+            </SkeletonPlaceholder>
+          ) : (
+            <Text style={styles.footerValue}>
+              {stats?.income_percentile || 'N/A'}
+            </Text>
+          )}
+          <Text style={styles.footerSubtext}>of Canadian earners</Text>
         </View>
       </View>
     </View>
@@ -168,23 +251,44 @@ export default function Home() {
     <View style={styles.stats}>
       <View style={styles.statCard}>
         <Ionicons name="trending-up" size={24} color="#4CAF50" />
-        <Text style={styles.statAmount}>
-          ${viewMode === 'monthly' ? '10,200' : '122,400'}
-        </Text>
-        <Text style={styles.statLabel}>Post-Tax Income</Text>
+        {isLoading ? (
+          <SkeletonPlaceholder
+            backgroundColor="#E0E0E0"
+            highlightColor="#F5F5F5"
+          >
+            <SkeletonPlaceholder.Item width={80} height={28} marginTop={8} />
+          </SkeletonPlaceholder>
+        ) : (
+          <Currency amount={stats?.income || 0} style={styles.statAmount} />
+        )}
+        <Text style={styles.statLabel}>Income</Text>
       </View>
       <View style={styles.statCard}>
         <Ionicons name="card-outline" size={24} color="#FF9800" />
-        <Text style={styles.statAmount}>
-          ${viewMode === 'monthly' ? '3,200' : '38,400'}
-        </Text>
-        <Text style={styles.statLabel}>Fixed Expenses</Text>
+        {isLoading ? (
+          <SkeletonPlaceholder
+            backgroundColor="#E0E0E0"
+            highlightColor="#F5F5F5"
+          >
+            <SkeletonPlaceholder.Item width={80} height={28} marginTop={8} />
+          </SkeletonPlaceholder>
+        ) : (
+          <Currency amount={stats?.expenses || 0} style={styles.statAmount} />
+        )}
+        <Text style={styles.statLabel}>Expenses</Text>
       </View>
       <View style={styles.statCard}>
         <Ionicons name="wallet-outline" size={24} color="#2196F3" />
-        <Text style={styles.statAmount}>
-          ${viewMode === 'monthly' ? '1,300' : '15,600'}
-        </Text>
+        {isLoading ? (
+          <SkeletonPlaceholder
+            backgroundColor="#E0E0E0"
+            highlightColor="#F5F5F5"
+          >
+            <SkeletonPlaceholder.Item width={80} height={28} marginTop={8} />
+          </SkeletonPlaceholder>
+        ) : (
+          <Currency amount={0} style={styles.statAmount} />
+        )}
         <Text style={styles.statLabel}>Debt</Text>
       </View>
     </View>
@@ -670,7 +774,12 @@ export default function Home() {
       <Stack.Screen options={{gestureEnabled: false}} />
       <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.greeting}>Hello, {firstName}</Text>
+          <View style={styles.header}>
+            <Text style={styles.greeting}>Hello, {firstName}</Text>
+            <TouchableOpacity onPress={() => router.push('/settings')}>
+              <Ionicons name="settings-outline" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
           {renderSurplusHero()}
           {renderQuickStats()}
           {renderAccounts()}
@@ -690,13 +799,18 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
   greeting: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
-    marginTop: 16,
-    marginLeft: 16,
-    marginBottom: 8,
   },
   hero: {
     backgroundColor: '#000',
@@ -739,14 +853,18 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   heroAmount: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#4CAF50',
-    marginBottom: 4,
   },
   heroSubtitle: {
     fontSize: 16,
     color: '#666',
+    marginTop: 4,
+  },
+  heroSubtitleBold: {
+    fontWeight: 'bold',
+    color: '#999',
   },
   heroFooter: {
     flexDirection: 'row',
@@ -811,7 +929,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statAmount: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#000',
     marginTop: 8,

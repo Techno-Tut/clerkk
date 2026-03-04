@@ -1,9 +1,11 @@
 from sqlalchemy import func
 from decimal import Decimal
+from typing import List
 
 from clerkk_backend.core.database import Database
 from clerkk_backend.models.expense import Expense
 from clerkk_backend.models.expense_history import ExpenseHistory
+from clerkk_backend.schemas.expense import ExpenseCreate
 
 
 class ExpenseService:
@@ -24,6 +26,26 @@ class ExpenseService:
             db.commit()
             db.refresh(expense)
             return expense
+
+    def create_expenses_batch(
+        self, user_id: str, expenses: List[ExpenseCreate]
+    ) -> List[Expense]:
+        """Create multiple expenses in one transaction"""
+        with self.database.session() as db:
+            expense_objects = [
+                Expense(
+                    user_id=user_id,
+                    category=exp.category,
+                    name=exp.name,
+                    amount=exp.amount,
+                )
+                for exp in expenses
+            ]
+            db.add_all(expense_objects)
+            db.commit()
+            for exp in expense_objects:
+                db.refresh(exp)
+            return expense_objects
 
     def update_expense(
         self, expense_id: int, user_id: str, new_amount: Decimal, reason: str = None

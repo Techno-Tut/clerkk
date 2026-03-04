@@ -9,10 +9,12 @@ import {useState} from 'react';
 import {useRouter} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Button, CurrencyInput} from '@/components';
+import {useOnboarding} from '@/contexts/OnboardingContext';
 
 export default function OnboardingIncome() {
   const router = useRouter();
-  const [grossAnnual, setGrossAnnual] = useState('');
+  const {setGrossAnnual} = useOnboarding();
+  const [grossAnnual, setGrossAnnualLocal] = useState('');
 
   const formatNumber = (text: string) => {
     const cleaned = text.replace(/[^0-9]/g, '');
@@ -21,11 +23,12 @@ export default function OnboardingIncome() {
   };
 
   const handleChange = (text: string) => {
-    setGrossAnnual(formatNumber(text));
+    setGrossAnnualLocal(formatNumber(text));
   };
 
   const handleContinue = () => {
-    // TODO: Save to local storage
+    const amount = parseInt(grossAnnual.replace(/,/g, ''), 10);
+    setGrossAnnual(amount);
     router.push('/onboarding/expenses');
   };
 

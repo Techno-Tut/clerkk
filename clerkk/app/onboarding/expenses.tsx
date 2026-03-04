@@ -2,9 +2,11 @@ import {View, Text, StyleSheet, ScrollView} from 'react-native';
 import {useState} from 'react';
 import {useRouter} from 'expo-router';
 import {Button, CurrencyInput, BackButton} from '@/components';
+import {useOnboarding} from '@/contexts/OnboardingContext';
 
 export default function OnboardingExpenses() {
   const router = useRouter();
+  const {setExpenses} = useOnboarding();
   const [rent, setRent] = useState('');
   const [utilities, setUtilities] = useState('');
   const [groceries, setGroceries] = useState('');
@@ -17,7 +19,34 @@ export default function OnboardingExpenses() {
   };
 
   const handleContinue = () => {
-    // TODO: Save to local storage
+    // Save expenses to context
+    const expenses = [];
+    if (rent)
+      expenses.push({
+        category: 'housing',
+        name: 'Rent/Mortgage',
+        amount: parseInt(rent.replace(/,/g, ''), 10),
+      });
+    if (utilities)
+      expenses.push({
+        category: 'utilities',
+        name: 'Utilities',
+        amount: parseInt(utilities.replace(/,/g, ''), 10),
+      });
+    if (groceries)
+      expenses.push({
+        category: 'food',
+        name: 'Groceries',
+        amount: parseInt(groceries.replace(/,/g, ''), 10),
+      });
+    if (misc)
+      expenses.push({
+        category: 'other',
+        name: 'Miscellaneous',
+        amount: parseInt(misc.replace(/,/g, ''), 10),
+      });
+
+    setExpenses(expenses);
     router.push('/onboarding/location');
   };
 

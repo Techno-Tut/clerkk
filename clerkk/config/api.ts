@@ -9,14 +9,37 @@ import type {
   ExpenseUpdateResponse,
   ExpenseTotalResponse,
 } from '../types/api';
+import type {components} from '../types/api-generated';
+import {Platform} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://localhost:8000';
+type UserProfileResponse = components['schemas']['UserProfileResponse'];
+type OnboardingCompleteResponse =
+  components['schemas']['OnboardingCompleteResponse'];
+
+const API_URL_KEY = '@clerkk_api_url';
+
+// Get API URL from storage or use default
+const getApiUrl = async () => {
+  try {
+    const url = await AsyncStorage.getItem(API_URL_KEY);
+    if (url) return url;
+  } catch {}
+
+  // Default URLs
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:8000';
+  }
+  return 'http://localhost:8000';
+};
 
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
   accessToken?: string,
 ): Promise<T> {
+  const API_URL = await getApiUrl();
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -39,6 +62,54 @@ async function request<T>(
 }
 
 export const api = {
+  user: {
+    getProfile: (token: string) =>
+      request<UserProfileResponse>('/user/me', {}, token),
+
+    completeOnboarding: (token: string) =>
+      request<OnboardingCompleteResponse>(
+        '/user/complete-onboarding',
+        {method: 'POST'},
+        token,
+      ),
+
+    // Complete full onboarding flow
+    submitOnboarding: async (
+      data: {
+        grossAnnual: number;
+        expenses: Array<{category: string; name: string; amount: number}>;
+        region: string;
+      },
+      token: string,
+    ) => {
+      // 1. Save income
+      await request<IncomeCreateResponse>(
+        '/income/',
+        {
+          method: 'POST',
+          body: JSON.stringify({gross_annual_estimate: data.grossAnnual}),
+        },
+        token,
+      );
+
+      // 2. Save expenses (batch)
+      if (data.expenses.length > 0) {
+        await request(
+          '/expenses/',
+          {method: 'POST', body: JSON.stringify(data.expenses)},
+          token,
+        );
+      }
+
+      // 3. Mark onboarding complete
+      return request<OnboardingCompleteResponse>(
+        '/user/complete-onboarding',
+        {method: 'POST'},
+        token,
+      );
+    },
+  },
+
   income: {
     create: (data: UserIncomeCreate, token: string) =>
       request<IncomeCreateResponse>(
@@ -72,5 +143,14 @@ export const api = {
 
     getTotal: (token: string) =>
       request<ExpenseTotalResponse>('/expenses/total', {}, token),
+  },
+
+  dashboard: {
+    getStats: (period: 'monthly' | 'yearly', token: string) =>
+      request<components['schemas']['DashboardResponse']>(
+        `/dashboard/stats?period=${period}`,
+        {},
+        token,
+      ),
   },
 };

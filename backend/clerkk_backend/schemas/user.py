@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 
 class UserProfileResponse(BaseModel):
     user_id: str
-    email: str
+    email: Optional[str] = None  # MVP: nullable
     country: str
     region: str
     onboarding_completed: bool

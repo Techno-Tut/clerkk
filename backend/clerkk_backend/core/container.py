@@ -4,6 +4,7 @@ from clerkk_backend.services.aws import ParameterStoreService
 from clerkk_backend.services.user_service import UserService
 from clerkk_backend.services.income_service import IncomeService
 from clerkk_backend.services.expense_service import ExpenseService
+from clerkk_backend.services.dashboard_service import DashboardService
 
 
 def resolve_config_value(parameter_store, config_value):
@@ -36,3 +37,10 @@ class Container(containers.DeclarativeContainer):
     income_service = providers.Factory(IncomeService, database=database)
 
     expense_service = providers.Factory(ExpenseService, database=database)
+
+    dashboard_service = providers.Factory(
+        DashboardService,
+        database=database,
+        income_service=income_service,
+        expense_service=expense_service,
+    )

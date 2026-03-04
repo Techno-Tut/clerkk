@@ -48,3 +48,14 @@ class UserService:
             db.commit()
             db.refresh(user)
             return user
+
+    def create_user(
+        self, auth0_id: str, email: str, country: str = "CA", region: str = "ON"
+    ) -> User:
+        """Create new user"""
+        with self.database.session() as db:
+            user = User(auth0_id=auth0_id, email=email, country=country, region=region)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            return user

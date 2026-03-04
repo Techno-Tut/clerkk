@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 
 from clerkk_backend.core.database import Database
 from clerkk_backend.models.user_income import UserIncome
@@ -13,6 +14,11 @@ class IncomeService:
 
     def __init__(self, database: Database):
         self.database = database
+
+    def get_user_income(self, user_id: str) -> Optional[UserIncome]:
+        """Get user income profile"""
+        with self.database.session() as db:
+            return db.query(UserIncome).filter(UserIncome.user_id == user_id).first()
 
     def create_user_income(self, user_id: str, gross_annual: Decimal) -> UserIncome:
         """Create initial income setup"""

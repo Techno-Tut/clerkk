@@ -13,11 +13,11 @@ export default function Index() {
     );
   }
 
-  // If user is logged in, go to dashboard
+  // If logged in, go to dashboard (onboarding check happens at login)
   if (user) {
     return <Redirect href="/dashboard" />;
   }
 
-  // Otherwise, go to welcome/onboarding
+  // Not logged in, show welcome
   return <Redirect href="/onboarding/welcome" />;
 }

@@ -5,7 +5,12 @@ from clerkk_backend.core.logging import setup_logging
 from clerkk_backend.core.middleware import RequestIDMiddleware, AuthMiddleware
 from clerkk_backend.core.auth import configure_auth
 from clerkk_backend.core.error_handlers import EXCEPTION_HANDLERS
-from clerkk_backend.controllers import income_router, expense_router, user_router
+from clerkk_backend.controllers import (
+    income_router,
+    expense_router,
+    user_router,
+    dashboard_router,
+)
 import os
 
 # Import all models so SQLAlchemy can create tables
@@ -68,7 +73,8 @@ container.config.from_yaml(config_file, required=True, envs_required=True)
 # Create database tables
 from clerkk_backend.models import Base
 
-Base.metadata.create_all(container.database().engine)
+# Base.metadata.drop_all(container.database().engine)  # MVP: Drop old schema
+# Base.metadata.create_all(container.database().engine)
 
 # Add CORS middleware (after config is loaded)
 app.add_middleware(
@@ -94,6 +100,7 @@ container.wire(
         "clerkk_backend.controllers.income",
         "clerkk_backend.controllers.expense",
         "clerkk_backend.controllers.user",
+        "clerkk_backend.controllers.dashboard",
     ]
 )
 
@@ -105,6 +112,7 @@ for exception_type, handler in EXCEPTION_HANDLERS.items():
 app.include_router(income_router)
 app.include_router(expense_router)
 app.include_router(user_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/")

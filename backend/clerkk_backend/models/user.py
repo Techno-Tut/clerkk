@@ -9,7 +9,7 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     auth0_id = Column(String, unique=True, nullable=False, index=True)
-    email = Column(String, unique=True, nullable=False, index=True)
+    email = Column(String, unique=True, nullable=True, index=True)  # MVP: nullable
     country = Column(String(2), nullable=False, default="CA")  # ISO 3166-1: 'CA', 'US'
     region = Column(String(2), nullable=False)  # Province/State: 'ON', 'BC', 'NY', 'CA'
     onboarding_completed = Column(Boolean, nullable=False, default=False)

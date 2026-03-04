@@ -6,10 +6,14 @@ import {
   Modal,
   FlatList,
   TextInput,
+  Alert,
 } from 'react-native';
 import {useState} from 'react';
 import {useRouter} from 'expo-router';
+import {useAuth0} from 'react-native-auth0';
 import {Button, BackButton} from '@/components';
+import {api} from '@/config/api';
+import {useOnboarding} from '@/contexts/OnboardingContext';
 
 const PROVINCES = [
   {code: 'ON', name: 'Ontario'},
@@ -29,9 +33,12 @@ const PROVINCES = [
 
 export default function OnboardingLocation() {
   const router = useRouter();
+  const {getCredentials, user} = useAuth0();
+  const {data, setRegion, reset} = useOnboarding();
   const [selected, setSelected] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const filtered = PROVINCES.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()),
@@ -39,12 +46,35 @@ export default function OnboardingLocation() {
 
   const handleSelect = (code: string) => {
     setSelected(code);
+    setRegion(code);
     setModalVisible(false);
     setSearch('');
   };
 
-  const handleContinue = () => {
-    router.replace('/signup');
+  const handleContinue = async () => {
+    // If not logged in, go to signup screen
+    if (!user) {
+      router.push('/signup');
+      return;
+    }
+
+    // User is logged in, save data
+    setLoading(true);
+    try {
+      const creds = await getCredentials();
+
+      // Submit all onboarding data
+      await api.user.submitOnboarding(data, creds.accessToken);
+
+      // Reset context and navigate
+      reset();
+      router.replace('/dashboard');
+    } catch (error) {
+      console.error('Failed to complete onboarding:', error);
+      Alert.alert('Error', 'Failed to save your information');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const selectedProvince = PROVINCES.find(p => p.code === selected);
@@ -68,7 +98,11 @@ export default function OnboardingLocation() {
         <Text style={styles.arrow}>▼</Text>
       </TouchableOpacity>
 
-      <Button title="Continue" onPress={handleContinue} disabled={!selected} />
+      <Button
+        title="Continue"
+        onPress={handleContinue}
+        disabled={!selected || loading}
+      />
 
       <Text style={styles.footer}>Step 3 of 3</Text>
 
