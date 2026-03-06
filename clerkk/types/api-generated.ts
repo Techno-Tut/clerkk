@@ -164,6 +164,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/debts/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Debts
+     * @description Get all active debts for user
+     */
+    get: operations['get_debts_debts__get'];
+    put?: never;
+    /**
+     * Create Debt
+     * @description Create a new debt
+     */
+    post: operations['create_debt_debts__post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/debts/{debt_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Update Debt
+     * @description Update a debt
+     */
+    put: operations['update_debt_debts__debt_id__put'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/debts/total': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get Total Debt
+     * @description Get total monthly debt payments in CAD
+     */
+    get: operations['get_total_debt_debts_total_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/': {
     parameters: {
       query?: never;
@@ -223,12 +287,98 @@ export interface components {
       taxes: string;
       /** Expenses */
       expenses: string;
+      /** Debt */
+      debt: string;
       /** Effective Tax Rate */
       effective_tax_rate: string;
       /** Marginal Tax Rate */
       marginal_tax_rate: string;
       /** Income Percentile */
       income_percentile: string;
+    };
+    /** DebtCreate */
+    DebtCreate: {
+      /**
+       * Name
+       * @description Debt name (e.g., 'TD Mortgage')
+       */
+      name: string;
+      type: components['schemas']['DebtType'];
+      /** Monthly Payment */
+      monthly_payment: number | string;
+      /** Current Balance */
+      current_balance: number | string;
+      /**
+       * Interest Rate
+       * @description Annual rate (e.g., 3.5)
+       */
+      interest_rate: number | string;
+      /**
+       * Currency
+       * @default CAD
+       */
+      currency: string;
+      /** Original Principal */
+      original_principal?: number | string | null;
+      /** Term Months */
+      term_months?: number | null;
+      /** Start Date */
+      start_date?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
+    /** DebtResponse */
+    DebtResponse: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      /** Type */
+      type: string;
+      /** Currency */
+      currency: string;
+      /** Monthly Payment */
+      monthly_payment: string;
+      /** Current Balance */
+      current_balance: string;
+      /** Interest Rate */
+      interest_rate: string;
+      /** Original Principal */
+      original_principal?: string | null;
+      /** Term Months */
+      term_months?: number | null;
+      /** Start Date */
+      start_date?: string | null;
+      /** Is Active */
+      is_active: boolean;
+      /** Notes */
+      notes?: string | null;
+    };
+    /**
+     * DebtType
+     * @enum {string}
+     */
+    DebtType: 'mortgage' | 'loan' | 'credit_card' | 'line_of_credit';
+    /** DebtUpdate */
+    DebtUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Monthly Payment */
+      monthly_payment?: number | string | null;
+      /** Current Balance */
+      current_balance?: number | string | null;
+      /** Interest Rate */
+      interest_rate?: number | string | null;
+      /** Original Principal */
+      original_principal?: number | string | null;
+      /** Term Months */
+      term_months?: number | null;
+      /** Start Date */
+      start_date?: string | null;
+      /** Is Active */
+      is_active?: boolean | null;
+      /** Notes */
+      notes?: string | null;
     };
     /** ExpenseCreate */
     ExpenseCreate: {
@@ -565,6 +715,128 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_debts_debts__get: {
+    parameters: {
+      query?: {
+        /** @description Convert all amounts to this currency */
+        display_currency?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DebtResponse'][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  create_debt_debts__post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DebtCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DebtResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_debt_debts__debt_id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        debt_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DebtUpdate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DebtResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_total_debt_debts_total_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            [key: string]: unknown;
+          };
         };
       };
     };

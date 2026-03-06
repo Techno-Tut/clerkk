@@ -261,7 +261,7 @@ export default function Home() {
         ) : (
           <Currency amount={stats?.income || 0} style={styles.statAmount} />
         )}
-        <Text style={styles.statLabel}>Income</Text>
+        <Text style={styles.statLabel}>What you earn</Text>
       </View>
       <View style={styles.statCard}>
         <Ionicons name="card-outline" size={24} color="#FF9800" />
@@ -275,9 +275,15 @@ export default function Home() {
         ) : (
           <Currency amount={stats?.expenses || 0} style={styles.statAmount} />
         )}
-        <Text style={styles.statLabel}>Expenses</Text>
+        <Text style={styles.statLabel}>What you spend</Text>
       </View>
-      <View style={styles.statCard}>
+      <TouchableOpacity
+        style={styles.statCard}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push('/debt');
+        }}
+      >
         <Ionicons name="wallet-outline" size={24} color="#2196F3" />
         {isLoading ? (
           <SkeletonPlaceholder
@@ -287,10 +293,10 @@ export default function Home() {
             <SkeletonPlaceholder.Item width={80} height={28} marginTop={8} />
           </SkeletonPlaceholder>
         ) : (
-          <Currency amount={0} style={styles.statAmount} />
+          <Currency amount={stats?.debt || 0} style={styles.statAmount} />
         )}
-        <Text style={styles.statLabel}>Debt</Text>
-      </View>
+        <Text style={styles.statLabel}>What you owe</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -929,15 +935,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statAmount: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#000',
-    marginTop: 8,
+    marginTop: 12,
     marginBottom: 4,
     minHeight: 28,
+    textAlign: 'center',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#999',
     marginTop: 4,
     textAlign: 'center',

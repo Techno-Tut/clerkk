@@ -9,6 +9,7 @@ class DashboardStats(BaseModel):
     post_tax_income: Decimal
     taxes: Decimal
     expenses: Decimal
+    debt: Decimal
     effective_tax_rate: Decimal
     marginal_tax_rate: Decimal
     income_percentile: str

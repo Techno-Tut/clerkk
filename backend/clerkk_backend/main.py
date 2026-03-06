@@ -10,6 +10,7 @@ from clerkk_backend.controllers import (
     expense_router,
     user_router,
     dashboard_router,
+    debt_router,
 )
 import os
 
@@ -101,6 +102,7 @@ container.wire(
         "clerkk_backend.controllers.expense",
         "clerkk_backend.controllers.user",
         "clerkk_backend.controllers.dashboard",
+        "clerkk_backend.controllers.debt",
     ]
 )
 
@@ -113,6 +115,7 @@ app.include_router(income_router)
 app.include_router(expense_router)
 app.include_router(user_router)
 app.include_router(dashboard_router)
+app.include_router(debt_router)
 
 
 @app.get("/")

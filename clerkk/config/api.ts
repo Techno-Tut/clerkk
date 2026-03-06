@@ -153,4 +153,33 @@ export const api = {
         token,
       ),
   },
+
+  debts: {
+    create: (data: components['schemas']['DebtCreate'], token: string) =>
+      request<components['schemas']['DebtResponse']>(
+        '/debts/',
+        {method: 'POST', body: JSON.stringify(data)},
+        token,
+      ),
+
+    update: (
+      id: string,
+      data: components['schemas']['DebtUpdate'],
+      token: string,
+    ) =>
+      request<components['schemas']['DebtResponse']>(
+        `/debts/${id}`,
+        {method: 'PUT', body: JSON.stringify(data)},
+        token,
+      ),
+
+    getAll: (token: string, displayCurrency?: string) =>
+      request<components['schemas']['DebtResponse'][]>(
+        displayCurrency
+          ? `/debts/?display_currency=${displayCurrency}`
+          : '/debts/',
+        {},
+        token,
+      ),
+  },
 };

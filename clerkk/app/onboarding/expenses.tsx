@@ -1,4 +1,11 @@
-import {View, Text, StyleSheet, ScrollView} from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import {useState} from 'react';
 import {useRouter} from 'expo-router';
 import {Button, CurrencyInput, BackButton} from '@/components';
@@ -51,52 +58,64 @@ export default function OnboardingExpenses() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <BackButton />
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{flex: 1}}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
+        <BackButton />
 
-      <Text style={styles.title}>What are your monthly expenses?</Text>
-      <Text style={styles.subtitle}>Add what you have (all optional)</Text>
+        <Text style={styles.title}>What are your monthly expenses?</Text>
+        <Text style={styles.subtitle}>Add what you have (all optional)</Text>
 
-      <View style={styles.inputGroup}>
-        <CurrencyInput
-          label="Rent / Mortgage"
-          value={rent}
-          onChangeText={text => setRent(formatNumber(text))}
-          placeholder="2,000"
-        />
-      </View>
+        <View style={styles.inputGroup}>
+          <CurrencyInput
+            label="Rent / Mortgage"
+            value={rent}
+            onChangeText={text => setRent(formatNumber(text))}
+            placeholder="2,000"
+          />
+        </View>
 
-      <View style={styles.inputGroup}>
-        <CurrencyInput
-          label="Utilities (hydro, internet, phone)"
-          value={utilities}
-          onChangeText={text => setUtilities(formatNumber(text))}
-          placeholder="200"
-        />
-      </View>
+        <View style={styles.inputGroup}>
+          <CurrencyInput
+            label="Utilities (hydro, internet, phone)"
+            value={utilities}
+            onChangeText={text => setUtilities(formatNumber(text))}
+            placeholder="200"
+          />
+        </View>
 
-      <View style={styles.inputGroup}>
-        <CurrencyInput
-          label="Groceries"
-          value={groceries}
-          onChangeText={text => setGroceries(formatNumber(text))}
-          placeholder="600"
-        />
-      </View>
+        <View style={styles.inputGroup}>
+          <CurrencyInput
+            label="Groceries"
+            value={groceries}
+            onChangeText={text => setGroceries(formatNumber(text))}
+            placeholder="600"
+          />
+        </View>
 
-      <View style={styles.inputGroup}>
-        <CurrencyInput
-          label="Miscellaneous (dining, entertainment)"
-          value={misc}
-          onChangeText={text => setMisc(formatNumber(text))}
-          placeholder="400"
-        />
-      </View>
+        <View style={styles.inputGroup}>
+          <CurrencyInput
+            label="Miscellaneous (dining, entertainment)"
+            value={misc}
+            onChangeText={text => setMisc(formatNumber(text))}
+            placeholder="400"
+          />
+        </View>
 
-      <Button title="Continue" onPress={handleContinue} />
+        <Button title="Continue" onPress={handleContinue} />
 
-      <Text style={styles.footer}>Step 2 of 3</Text>
-    </ScrollView>
+        <Text style={styles.footer}>Step 2 of 3</Text>
+
+        {/* Bottom spacing for keyboard */}
+        <View style={{height: 100}} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

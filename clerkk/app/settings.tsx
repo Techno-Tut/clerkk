@@ -14,11 +14,71 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DEV_MODE_KEY = '@clerkk_dev_mode';
 const API_URL_KEY = '@clerkk_api_url';
+const MULTI_CURRENCY_KEY = '@clerkk_multi_currency';
+const CONVERT_DEBT_KEY = '@clerkk_convert_debt_to_local';
+
+interface SettingItem {
+  id: string;
+  label: string;
+  description?: string;
+  type: 'toggle' | 'input';
+  storageKey: string;
+  defaultValue?: any;
+  showWhen?: string;
+}
+
+interface SettingSection {
+  title: string;
+  items: SettingItem[];
+}
+
+const SETTINGS_CONFIG: SettingSection[] = [
+  {
+    title: 'DEBT MANAGEMENT',
+    items: [
+      {
+        id: 'multiCurrency',
+        label: 'Multi-Currency Support',
+        description: 'Track debts in USD, INR, EUR',
+        type: 'toggle',
+        storageKey: MULTI_CURRENCY_KEY,
+        defaultValue: false,
+      },
+      {
+        id: 'convertDebt',
+        label: 'Convert to Local Currency',
+        description: 'Show all debts in CAD',
+        type: 'toggle',
+        storageKey: CONVERT_DEBT_KEY,
+        defaultValue: true,
+      },
+    ],
+  },
+  {
+    title: 'DEVELOPER',
+    items: [
+      {
+        id: 'devMode',
+        label: 'Developer Mode',
+        type: 'toggle',
+        storageKey: DEV_MODE_KEY,
+        defaultValue: false,
+      },
+      {
+        id: 'apiUrl',
+        label: 'API URL',
+        type: 'input',
+        storageKey: API_URL_KEY,
+        defaultValue: 'http://localhost:8000',
+        showWhen: 'devMode',
+      },
+    ],
+  },
+];
 
 export default function Settings() {
   const router = useRouter();
-  const [devMode, setDevMode] = useState(false);
-  const [apiUrl, setApiUrl] = useState('http://localhost:8000');
+  const [settings, setSettings] = useState<Record<string, any>>({});
 
   useEffect(() => {
     loadSettings();
@@ -26,23 +86,34 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const mode = await AsyncStorage.getItem(DEV_MODE_KEY);
-      const url = await AsyncStorage.getItem(API_URL_KEY);
-      setDevMode(mode === 'true');
-      setApiUrl(url || 'http://localhost:8000');
+      const loadedSettings: Record<string, any> = {};
+
+      for (const section of SETTINGS_CONFIG) {
+        for (const item of section.items) {
+          const value = await AsyncStorage.getItem(item.storageKey);
+          if (item.type === 'toggle') {
+            loadedSettings[item.id] =
+              value === 'true' || (value === null && item.defaultValue);
+          } else {
+            loadedSettings[item.id] = value || item.defaultValue;
+          }
+        }
+      }
+
+      setSettings(loadedSettings);
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
   };
 
-  const toggleDevMode = async (value: boolean) => {
-    setDevMode(value);
-    await AsyncStorage.setItem(DEV_MODE_KEY, value.toString());
+  const updateSetting = async (id: string, value: any, storageKey: string) => {
+    setSettings(prev => ({...prev, [id]: value}));
+    await AsyncStorage.setItem(storageKey, value.toString());
   };
 
   const saveApiUrl = async () => {
     try {
-      await AsyncStorage.setItem(API_URL_KEY, apiUrl);
+      await AsyncStorage.setItem(API_URL_KEY, settings.apiUrl);
       Alert.alert(
         'Success',
         'API URL saved. Restart the app to apply changes.',
@@ -63,34 +134,79 @@ export default function Settings() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.section}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Dev Mode</Text>
-            <Switch
-              value={devMode}
-              onValueChange={toggleDevMode}
-              trackColor={{false: '#E0E0E0', true: '#4CAF50'}}
-              thumbColor="#fff"
-            />
-          </View>
-        </View>
+        {SETTINGS_CONFIG.map((section, sectionIndex) => {
+          const shouldShowSection = section.items.some(item => {
+            if (!item.showWhen) return true;
+            return settings[item.showWhen];
+          });
 
-        {devMode && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>API Configuration</Text>
-            <TextInput
-              style={styles.input}
-              value={apiUrl}
-              onChangeText={setApiUrl}
-              placeholder="http://localhost:8000"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <TouchableOpacity style={styles.button} onPress={saveApiUrl}>
-              <Text style={styles.buttonText}>Save API URL</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          if (!shouldShowSection) return null;
+
+          return (
+            <View key={sectionIndex}>
+              <Text style={styles.sectionHeader}>{section.title}</Text>
+              <View style={styles.section}>
+                {section.items.map((item, itemIndex) => {
+                  if (item.showWhen && !settings[item.showWhen]) return null;
+
+                  if (item.type === 'toggle') {
+                    return (
+                      <View key={item.id}>
+                        {itemIndex > 0 && <View style={styles.divider} />}
+                        <View style={styles.settingRow}>
+                          <View style={styles.settingInfo}>
+                            <Text style={styles.settingLabel}>
+                              {item.label}
+                            </Text>
+                            {item.description && (
+                              <Text style={styles.settingDescription}>
+                                {item.description}
+                              </Text>
+                            )}
+                          </View>
+                          <Switch
+                            value={settings[item.id] || false}
+                            onValueChange={value =>
+                              updateSetting(item.id, value, item.storageKey)
+                            }
+                            trackColor={{false: '#E5E5EA', true: '#34C759'}}
+                            thumbColor="#fff"
+                          />
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  if (item.type === 'input') {
+                    return (
+                      <View key={item.id} style={styles.inputRow}>
+                        <Text style={styles.inputLabel}>{item.label}</Text>
+                        <TextInput
+                          style={styles.input}
+                          value={settings[item.id] || ''}
+                          onChangeText={value =>
+                            setSettings(prev => ({...prev, [item.id]: value}))
+                          }
+                          placeholder={item.defaultValue}
+                          placeholderTextColor="#999"
+                          autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                          style={styles.saveButton}
+                          onPress={saveApiUrl}
+                        >
+                          <Text style={styles.saveButtonText}>Save</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  }
+
+                  return null;
+                })}
+              </View>
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -99,60 +215,96 @@ export default function Settings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F2F2F7',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    alignItems: 'center',
+    paddingHorizontal: 16,
     paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#E5E5EA',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
   },
   content: {
-    padding: 16,
+    flex: 1,
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6D6D72',
+    marginTop: 24,
+    marginBottom: 8,
+    marginLeft: 16,
+    letterSpacing: -0.08,
   },
   section: {
-    marginBottom: 24,
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#666',
-  },
-  row: {
+  settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    padding: 16,
+    minHeight: 44,
   },
-  label: {
-    fontSize: 16,
+  divider: {
+    height: 0.5,
+    backgroundColor: '#E5E5EA',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  settingInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  settingLabel: {
+    fontSize: 17,
     color: '#000',
+    marginBottom: 2,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: '#6D6D72',
+    marginTop: 2,
+  },
+  inputRow: {
+    padding: 16,
+  },
+  inputLabel: {
+    fontSize: 13,
+    color: '#6D6D72',
+    marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
     padding: 12,
-    fontSize: 14,
-    marginBottom: 12,
+    fontSize: 17,
+    color: '#000',
   },
-  button: {
-    backgroundColor: '#000',
-    padding: 16,
-    borderRadius: 8,
+  saveButton: {
+    margin: 16,
+    marginTop: 16,
+    marginBottom: 0,
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    padding: 14,
     alignItems: 'center',
   },
-  buttonText: {
+  saveButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
 });
