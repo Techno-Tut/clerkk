@@ -58,6 +58,8 @@ async function request<T>(
     throw new Error(error.detail || `API Error: ${response.status}`);
   }
 
+  if (response.status === 204) return;
+
   return response.json();
 }
 

@@ -10,10 +10,11 @@ import {
   Alert,
   ActivityIndicator,
   Keyboard,
+  Animated,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, useRef} from 'react';
 import {useAuth0} from 'react-native-auth0';
 import {useRouter, Stack, useFocusEffect} from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -21,6 +22,7 @@ import {
   KeyboardAwareScrollView,
   useReanimatedKeyboardAnimation,
 } from 'react-native-keyboard-controller';
+import {Swipeable, GestureHandlerRootView} from 'react-native-gesture-handler';
 import {api} from '../config/api';
 import CurrencyInput from '../components/CurrencyInput';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
@@ -71,6 +73,7 @@ export default function Home() {
   const [newAccountBalance, setNewAccountBalance] = useState('');
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [newBalance, setNewBalance] = useState('');
+  const swipeableRefs = useRef<{[key: string]: Swipeable | null}>({});
   const [paycheckAmount, setPaycheckAmount] = useState('');
   const [paycheckDate, setPaycheckDate] = useState('Today');
   const [paycheckSource, setPaycheckSource] = useState('');
@@ -116,6 +119,36 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to fetch accounts:', error);
     }
+  };
+
+  const handleDeleteAccount = (accountId: string, accountName: string) => {
+    Alert.alert(
+      `Delete ${accountName}`,
+      "This will hide this account. You can't undo this action.",
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            swipeableRefs.current[accountId]?.close();
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const creds = await getCredentials();
+              await api.accounts.delete(accountId, creds.accessToken);
+              await fetchAccounts();
+            } catch (error) {
+              console.error('Failed to delete account:', error);
+              Alert.alert('Error', 'Failed to delete account');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleLogout = async () => {
@@ -383,136 +416,173 @@ export default function Home() {
               ACCOUNT_CONFIG.cash;
 
             return (
-              <View key={account.id} style={styles.accountCard}>
-                <View style={styles.accountHeader}>
-                  <View style={styles.accountLeft}>
-                    <View
+              <Swipeable
+                key={account.id}
+                ref={ref => (swipeableRefs.current[account.id] = ref)}
+                renderRightActions={(progress, dragX) => {
+                  const scale = dragX.interpolate({
+                    inputRange: [-100, 0],
+                    outputRange: [1, 0],
+                    extrapolate: 'clamp',
+                  });
+                  const opacity = dragX.interpolate({
+                    inputRange: [-100, -20, 0],
+                    outputRange: [1, 0.5, 0],
+                    extrapolate: 'clamp',
+                  });
+                  return (
+                    <Animated.View
                       style={[
-                        styles.accountIconContainer,
-                        {backgroundColor: config.bgColor},
+                        styles.deleteButton,
+                        {opacity, transform: [{scale}]},
                       ]}
                     >
-                      <Ionicons
-                        name={config.icon}
-                        size={24}
-                        color={config.color}
-                      />
-                    </View>
-                    <View>
-                      <Text style={styles.accountName}>{account.name}</Text>
-                      <Text style={styles.accountType}>
-                        {account.account_type.toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.accountBalance}>
-                    ${parseFloat(account.current_balance).toLocaleString()}
-                  </Text>
-                </View>
-
-                {/* Progress bar or prompt for TFSA/RRSP */}
-                {(account.account_type === 'tfsa' ||
-                  account.account_type === 'rrsp') && (
-                  <>
-                    {account.annual_contribution_limit &&
-                    account.contributions_this_year !== null ? (
-                      <View style={styles.progressContainer}>
-                        <View style={styles.progressBar}>
-                          <View
-                            style={[
-                              styles.progressFill,
-                              {
-                                width: `${Math.min(
-                                  100,
-                                  (parseFloat(account.contributions_this_year) /
-                                    parseFloat(
-                                      account.annual_contribution_limit,
-                                    )) *
-                                    100,
-                                )}%`,
-                              },
-                            ]}
-                          />
-                        </View>
-                        <Text style={styles.progressText}>
-                          $
-                          {parseFloat(
-                            account.contributions_this_year,
-                          ).toLocaleString()}{' '}
-                          of $
-                          {parseFloat(
-                            account.annual_contribution_limit,
-                          ).toLocaleString()}{' '}
-                          contributed ({account.limit_year})
-                        </Text>
+                      <View style={styles.deleteIconCircle}>
+                        <Ionicons name="trash-outline" size={24} color="#fff" />
                       </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.limitPrompt}
-                        onPress={() => {
-                          setSelectedAccountId(account.id);
-                          setShowSetLimitModal(true);
-                        }}
+                    </Animated.View>
+                  );
+                }}
+                onSwipeableOpen={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  handleDeleteAccount(account.id, account.name);
+                }}
+              >
+                <View style={styles.accountCard}>
+                  <View style={styles.accountHeader}>
+                    <View style={styles.accountLeft}>
+                      <View
+                        style={[
+                          styles.accountIconContainer,
+                          {backgroundColor: config.bgColor},
+                        ]}
                       >
                         <Ionicons
-                          name="information-circle-outline"
-                          size={16}
-                          color="#FF9800"
+                          name={config.icon}
+                          size={24}
+                          color={config.color}
                         />
-                        <Text style={styles.limitPromptText}>
-                          Set your annual contribution limit to track progress
+                      </View>
+                      <View>
+                        <Text style={styles.accountName}>{account.name}</Text>
+                        <Text style={styles.accountType}>
+                          {account.account_type.toUpperCase()}
                         </Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
+                      </View>
+                    </View>
+                    <Text style={styles.accountBalance}>
+                      ${parseFloat(account.current_balance).toLocaleString()}
+                    </Text>
+                  </View>
 
-                <View style={styles.accountActions}>
+                  {/* Progress bar or prompt for TFSA/RRSP */}
+                  {(account.account_type === 'tfsa' ||
+                    account.account_type === 'rrsp') && (
+                    <>
+                      {account.annual_contribution_limit &&
+                      account.contributions_this_year !== null ? (
+                        <View style={styles.progressContainer}>
+                          <View style={styles.progressBar}>
+                            <View
+                              style={[
+                                styles.progressFill,
+                                {
+                                  width: `${Math.min(
+                                    100,
+                                    (parseFloat(
+                                      account.contributions_this_year,
+                                    ) /
+                                      parseFloat(
+                                        account.annual_contribution_limit,
+                                      )) *
+                                      100,
+                                  )}%`,
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text style={styles.progressText}>
+                            $
+                            {parseFloat(
+                              account.contributions_this_year,
+                            ).toLocaleString()}{' '}
+                            of $
+                            {parseFloat(
+                              account.annual_contribution_limit,
+                            ).toLocaleString()}{' '}
+                            contributed ({account.limit_year})
+                          </Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.limitPrompt}
+                          onPress={() => {
+                            setSelectedAccountId(account.id);
+                            setShowSetLimitModal(true);
+                          }}
+                        >
+                          <Ionicons
+                            name="information-circle-outline"
+                            size={16}
+                            color="#FF9800"
+                          />
+                          <Text style={styles.limitPromptText}>
+                            Set your annual contribution limit to track progress
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
+
+                  <View style={styles.accountActions}>
+                    <TouchableOpacity
+                      style={styles.accountButton}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSelectedAccount(account.name);
+                        setSelectedAccountId(account.id);
+                        setShowContributeModal(true);
+                      }}
+                    >
+                      <Ionicons
+                        name="add-circle-outline"
+                        size={16}
+                        color="#4CAF50"
+                      />
+                      <Text style={styles.accountButtonText}>Contribute</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.accountButton}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSelectedAccount(account.name);
+                        setSelectedAccountId(account.id);
+                        setShowWithdrawModal(true);
+                      }}
+                    >
+                      <Ionicons
+                        name="remove-circle-outline"
+                        size={16}
+                        color="#F44336"
+                      />
+                      <Text style={styles.accountButtonText}>Withdraw</Text>
+                    </TouchableOpacity>
+                  </View>
                   <TouchableOpacity
-                    style={styles.accountButton}
+                    style={styles.rebalanceButton}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSelectedAccount(account.name);
                       setSelectedAccountId(account.id);
-                      setShowContributeModal(true);
+                      setShowUpdateBalanceModal(true);
                     }}
                   >
-                    <Ionicons
-                      name="add-circle-outline"
-                      size={16}
-                      color="#4CAF50"
-                    />
-                    <Text style={styles.accountButtonText}>Contribute</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.accountButton}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedAccount(account.name);
-                      setSelectedAccountId(account.id);
-                      setShowWithdrawModal(true);
-                    }}
-                  >
-                    <Ionicons
-                      name="remove-circle-outline"
-                      size={16}
-                      color="#F44336"
-                    />
-                    <Text style={styles.accountButtonText}>Withdraw</Text>
+                    <Text style={styles.rebalanceButtonText}>
+                      Update balance
+                    </Text>
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.rebalanceButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setSelectedAccount(account.name);
-                    setSelectedAccountId(account.id);
-                    setShowUpdateBalanceModal(true);
-                  }}
-                >
-                  <Text style={styles.rebalanceButtonText}>Update balance</Text>
-                </TouchableOpacity>
-              </View>
+              </Swipeable>
             );
           })}
           <TouchableOpacity
@@ -627,7 +697,8 @@ export default function Home() {
       <Modal visible={showLogPaycheckModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <KeyboardAwareScrollView
-            contentContainerStyle={{flex: 1, justifyContent: 'flex-end'}}
+            style={{flex: 1}}
+            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
           >
             <TouchableOpacity
               style={{flex: 1}}
@@ -681,7 +752,8 @@ export default function Home() {
       <Modal visible={showAddAccountModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <KeyboardAwareScrollView
-            contentContainerStyle={{flex: 1, justifyContent: 'flex-end'}}
+            style={{flex: 1}}
+            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
           >
             <TouchableOpacity
               style={{flex: 1}}
@@ -916,7 +988,8 @@ export default function Home() {
       <Modal visible={showUpdateBalanceModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <KeyboardAwareScrollView
-            contentContainerStyle={{flex: 1, justifyContent: 'flex-end'}}
+            style={{flex: 1}}
+            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
           >
             <TouchableOpacity
               style={{flex: 1}}
@@ -1037,7 +1110,8 @@ export default function Home() {
       <Modal visible={showWithdrawModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <KeyboardAwareScrollView
-            contentContainerStyle={{flex: 1, justifyContent: 'flex-end'}}
+            style={{flex: 1}}
+            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
           >
             <TouchableOpacity
               style={{flex: 1}}
@@ -1096,7 +1170,8 @@ export default function Home() {
       <Modal visible={showSetLimitModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <KeyboardAwareScrollView
-            contentContainerStyle={{flex: 1, justifyContent: 'flex-end'}}
+            style={{flex: 1}}
+            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
           >
             <TouchableOpacity
               style={{flex: 1}}
@@ -1167,18 +1242,23 @@ export default function Home() {
     <>
       <Stack.Screen options={{gestureEnabled: false}} />
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Text style={styles.greeting}>Hello, {firstName}</Text>
-            <TouchableOpacity onPress={() => router.push('/settings')}>
-              <Ionicons name="settings-outline" size={24} color="#000" />
-            </TouchableOpacity>
-          </View>
-          {renderSurplusHero()}
-          {renderQuickStats()}
-          {renderAccounts()}
-          {renderQuickActions()}
-        </ScrollView>
+        <GestureHandlerRootView style={{flex: 1}}>
+          <ScrollView
+            style={styles.scroll}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.header}>
+              <Text style={styles.greeting}>Hello, {firstName}</Text>
+              <TouchableOpacity onPress={() => router.push('/settings')}>
+                <Ionicons name="settings-outline" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+            {renderSurplusHero()}
+            {renderQuickStats()}
+            {renderAccounts()}
+            {renderQuickActions()}
+          </ScrollView>
+        </GestureHandlerRootView>
         {renderModals()}
       </SafeAreaView>
     </>
@@ -1697,5 +1777,24 @@ const styles = StyleSheet.create({
   },
   typeButtonTextActive: {
     color: '#fff',
+  },
+  deleteButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    marginVertical: 8,
+  },
+  deleteIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F44336',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
