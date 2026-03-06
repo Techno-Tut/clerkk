@@ -182,4 +182,49 @@ export const api = {
         token,
       ),
   },
+
+  accounts: {
+    create: (data: components['schemas']['AccountCreate'], token: string) =>
+      request<components['schemas']['AccountResponse']>(
+        '/accounts/',
+        {method: 'POST', body: JSON.stringify(data)},
+        token,
+      ),
+
+    getAll: (token: string) =>
+      request<components['schemas']['AccountResponse'][]>(
+        '/accounts/',
+        {},
+        token,
+      ),
+
+    update: (
+      id: string,
+      data: components['schemas']['AccountUpdate'],
+      token: string,
+    ) =>
+      request<components['schemas']['AccountResponse']>(
+        `/accounts/${id}`,
+        {method: 'PUT', body: JSON.stringify(data)},
+        token,
+      ),
+
+    addEvent: (
+      id: string,
+      data: components['schemas']['LedgerEventCreate'],
+      token: string,
+    ) =>
+      request<components['schemas']['LedgerEventResponse']>(
+        `/accounts/${id}/events`,
+        {method: 'POST', body: JSON.stringify(data)},
+        token,
+      ),
+
+    getHistory: (id: string, token: string) =>
+      request<components['schemas']['AccountWithHistory']>(
+        `/accounts/${id}/history`,
+        {},
+        token,
+      ),
+  },
 };

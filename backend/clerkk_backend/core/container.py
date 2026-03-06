@@ -6,6 +6,7 @@ from clerkk_backend.services.income_service import IncomeService
 from clerkk_backend.services.expense_service import ExpenseService
 from clerkk_backend.services.dashboard_service import DashboardService
 from clerkk_backend.services.debt_service import DebtService
+from clerkk_backend.services.account_service import AccountService
 
 
 def resolve_config_value(parameter_store, config_value):
@@ -40,6 +41,8 @@ class Container(containers.DeclarativeContainer):
     expense_service = providers.Factory(ExpenseService, database=database)
 
     debt_service = providers.Factory(DebtService, database=database)
+
+    account_service = providers.Factory(AccountService, database=database)
 
     dashboard_service = providers.Factory(
         DashboardService,

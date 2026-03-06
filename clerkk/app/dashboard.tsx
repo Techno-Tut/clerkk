@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import {useAuth0} from 'react-native-auth0';
-import {useRouter, Stack} from 'expo-router';
+import {useRouter, Stack, useFocusEffect} from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
 import {api} from '../config/api';
@@ -28,6 +28,7 @@ export default function Home() {
 
   const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
   const [stats, setStats] = useState<any>(null);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showContributeModal, setShowContributeModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -38,6 +39,7 @@ export default function Home() {
   const [showQuickActionsInfo, setShowQuickActionsInfo] = useState(false);
   const [amount, setAmount] = useState('');
   const [selectedAccount, setSelectedAccount] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState('');
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<'investment' | 'cash'>(
     'cash',
@@ -50,7 +52,15 @@ export default function Home() {
 
   useEffect(() => {
     fetchStats();
+    fetchAccounts();
   }, [viewMode]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchStats();
+      fetchAccounts();
+    }, [viewMode]),
+  );
 
   const fetchStats = async () => {
     try {
@@ -63,6 +73,16 @@ export default function Home() {
       console.error('Failed to fetch stats:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchAccounts = async () => {
+    try {
+      const creds = await getCredentials();
+      const data = await api.accounts.getAll(creds.accessToken);
+      setAccounts(data);
+    } catch (error) {
+      console.error('Failed to fetch accounts:', error);
     }
   };
 
@@ -109,15 +129,6 @@ export default function Home() {
       subtitle: 'Sign out of your account',
       onPress: handleLogout,
       haptic: Haptics.ImpactFeedbackStyle.Medium,
-    },
-  ];
-
-  const accounts = [
-    {
-      name: 'Emergency Fund',
-      balance: 18000,
-      status: '6 months saved ✓',
-      statusColor: '#4CAF50',
     },
   ];
 
@@ -333,65 +344,92 @@ export default function Home() {
         </View>
       ) : (
         <>
-          {accounts.map(account => (
-            <View key={account.name} style={styles.accountCard}>
-              <View style={styles.accountHeader}>
-                <View>
-                  <Text style={styles.accountName}>{account.name}</Text>
-                  <Text
-                    style={[styles.accountStatus, {color: account.statusColor}]}
-                  >
-                    {account.status}
+          {accounts.map(account => {
+            const getAccountIcon = (type: string) => {
+              switch (type) {
+                case 'cash':
+                  return 'wallet-outline';
+                case 'tfsa':
+                  return 'shield-checkmark-outline';
+                case 'rrsp':
+                  return 'trending-up-outline';
+                case 'investment':
+                  return 'bar-chart-outline';
+                default:
+                  return 'wallet-outline';
+              }
+            };
+
+            return (
+              <View key={account.id} style={styles.accountCard}>
+                <View style={styles.accountHeader}>
+                  <View style={styles.accountLeft}>
+                    <View style={styles.accountIconContainer}>
+                      <Ionicons
+                        name={getAccountIcon(account.account_type)}
+                        size={24}
+                        color="#4CAF50"
+                      />
+                    </View>
+                    <View>
+                      <Text style={styles.accountName}>{account.name}</Text>
+                      <Text style={styles.accountType}>
+                        {account.account_type.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.accountBalance}>
+                    ${parseFloat(account.current_balance).toLocaleString()}
                   </Text>
                 </View>
-                <Text style={styles.accountBalance}>
-                  ${account.balance.toLocaleString()}
-                </Text>
-              </View>
-              <View style={styles.accountActions}>
+                <View style={styles.accountActions}>
+                  <TouchableOpacity
+                    style={styles.accountButton}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedAccount(account.name);
+                      setSelectedAccountId(account.id);
+                      setShowContributeModal(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={16}
+                      color="#4CAF50"
+                    />
+                    <Text style={styles.accountButtonText}>Contribute</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.accountButton}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedAccount(account.name);
+                      setSelectedAccountId(account.id);
+                      setShowWithdrawModal(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="remove-circle-outline"
+                      size={16}
+                      color="#F44336"
+                    />
+                    <Text style={styles.accountButtonText}>Withdraw</Text>
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity
-                  style={styles.accountButton}
+                  style={styles.rebalanceButton}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setSelectedAccount(account.name);
-                    setShowContributeModal(true);
+                    setSelectedAccountId(account.id);
+                    setShowUpdateBalanceModal(true);
                   }}
                 >
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={16}
-                    color="#4CAF50"
-                  />
-                  <Text style={styles.accountButtonText}>Contribute</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.accountButton}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setSelectedAccount(account.name);
-                    setShowWithdrawModal(true);
-                  }}
-                >
-                  <Ionicons
-                    name="remove-circle-outline"
-                    size={16}
-                    color="#F44336"
-                  />
-                  <Text style={styles.accountButtonText}>Withdraw</Text>
+                  <Text style={styles.rebalanceButtonText}>Update balance</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.rebalanceButton}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setSelectedAccount(account.name);
-                  setShowUpdateBalanceModal(true);
-                }}
-              >
-                <Text style={styles.rebalanceButtonText}>Update balance</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+            );
+          })}
           <TouchableOpacity
             style={styles.addAccountButtonSmall}
             onPress={() => setShowAddAccountModal(true)}
@@ -594,7 +632,39 @@ export default function Home() {
                       newAccountType === 'cash' && styles.typeButtonTextActive,
                     ]}
                   >
-                    Savings
+                    Cash
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    newAccountType === 'tfsa' && styles.typeButtonActive,
+                  ]}
+                  onPress={() => setNewAccountType('tfsa')}
+                >
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      newAccountType === 'tfsa' && styles.typeButtonTextActive,
+                    ]}
+                  >
+                    TFSA
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    newAccountType === 'rrsp' && styles.typeButtonActive,
+                  ]}
+                  onPress={() => setNewAccountType('rrsp')}
+                >
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      newAccountType === 'rrsp' && styles.typeButtonTextActive,
+                    ]}
+                  >
+                    RRSP
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -625,11 +695,26 @@ export default function Home() {
               />
               <TouchableOpacity
                 style={styles.modalButton}
-                onPress={() => {
-                  setNewAccountName('');
-                  setNewAccountType('cash');
-                  setNewAccountBalance('');
-                  setShowAddAccountModal(false);
+                onPress={async () => {
+                  try {
+                    const creds = await getCredentials();
+                    await api.accounts.create(
+                      {
+                        name: newAccountName,
+                        account_type: newAccountType,
+                        initial_balance: parseFloat(newAccountBalance),
+                      },
+                      creds.accessToken,
+                    );
+                    setNewAccountName('');
+                    setNewAccountType('cash');
+                    setNewAccountBalance('');
+                    setShowAddAccountModal(false);
+                    fetchAccounts();
+                  } catch (error) {
+                    console.error('Failed to create account:', error);
+                    Alert.alert('Error', 'Failed to create account');
+                  }
                 }}
               >
                 <Text style={styles.modalButtonText}>Add Account</Text>
@@ -673,9 +758,24 @@ export default function Home() {
               />
               <TouchableOpacity
                 style={styles.modalButton}
-                onPress={() => {
-                  setNewBalance('');
-                  setShowUpdateBalanceModal(false);
+                onPress={async () => {
+                  try {
+                    const creds = await getCredentials();
+                    await api.accounts.addEvent(
+                      selectedAccountId,
+                      {
+                        event_type: 'update_balance',
+                        balance_snapshot: parseFloat(newBalance),
+                      },
+                      creds.accessToken,
+                    );
+                    setNewBalance('');
+                    setShowUpdateBalanceModal(false);
+                    fetchAccounts();
+                  } catch (error) {
+                    console.error('Failed to update balance:', error);
+                    Alert.alert('Error', 'Failed to update balance');
+                  }
                 }}
               >
                 <Text style={styles.modalButtonText}>Update Balance</Text>
@@ -717,9 +817,24 @@ export default function Home() {
               />
               <TouchableOpacity
                 style={styles.modalButton}
-                onPress={() => {
-                  setAmount('');
-                  setShowContributeModal(false);
+                onPress={async () => {
+                  try {
+                    const creds = await getCredentials();
+                    await api.accounts.addEvent(
+                      selectedAccountId,
+                      {
+                        event_type: 'contribute',
+                        amount: parseFloat(amount),
+                      },
+                      creds.accessToken,
+                    );
+                    setAmount('');
+                    setShowContributeModal(false);
+                    fetchAccounts();
+                  } catch (error) {
+                    console.error('Failed to contribute:', error);
+                    Alert.alert('Error', 'Failed to add contribution');
+                  }
                 }}
               >
                 <Text style={styles.modalButtonText}>Contribute</Text>
@@ -761,9 +876,24 @@ export default function Home() {
               />
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonDanger]}
-                onPress={() => {
-                  setAmount('');
-                  setShowWithdrawModal(false);
+                onPress={async () => {
+                  try {
+                    const creds = await getCredentials();
+                    await api.accounts.addEvent(
+                      selectedAccountId,
+                      {
+                        event_type: 'withdraw',
+                        amount: parseFloat(amount),
+                      },
+                      creds.accessToken,
+                    );
+                    setAmount('');
+                    setShowWithdrawModal(false);
+                    fetchAccounts();
+                  } catch (error) {
+                    console.error('Failed to withdraw:', error);
+                    Alert.alert('Error', 'Failed to withdraw');
+                  }
                 }}
               >
                 <Text style={styles.modalButtonText}>Withdraw</Text>
@@ -1061,8 +1191,21 @@ const styles = StyleSheet.create({
   accountHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  accountLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  accountIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f9f4',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   accountName: {
     fontSize: 16,
@@ -1073,6 +1216,11 @@ const styles = StyleSheet.create({
   accountStatus: {
     fontSize: 12,
     marginTop: 4,
+  },
+  accountType: {
+    fontSize: 12,
+    marginTop: 4,
+    color: '#666',
   },
   accountBalance: {
     fontSize: 24,
@@ -1208,17 +1356,18 @@ const styles = StyleSheet.create({
   },
   typeSelector: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 2,
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 16,
   },
   typeButton: {
     flex: 1,
-    paddingVertical: 8,
+    minWidth: '45%',
+    paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
+    backgroundColor: '#f5f5f5',
   },
   typeButtonActive: {
     backgroundColor: '#4CAF50',

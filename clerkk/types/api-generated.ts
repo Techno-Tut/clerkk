@@ -228,6 +228,76 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/accounts/': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Accounts */
+    get: operations['get_accounts_accounts__get'];
+    put?: never;
+    /** Create Account */
+    post: operations['create_account_accounts__post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{account_id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Account */
+    get: operations['get_account_accounts__account_id__get'];
+    /** Update Account */
+    put: operations['update_account_accounts__account_id__put'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{account_id}/events': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add Ledger Event */
+    post: operations['add_ledger_event_accounts__account_id__events_post'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{account_id}/history': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Account History */
+    get: operations['get_account_history_accounts__account_id__history_get'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/': {
     parameters: {
       query?: never;
@@ -266,6 +336,77 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AccountCreate */
+    AccountCreate: {
+      /** Name */
+      name: string;
+      account_type: components['schemas']['AccountType'];
+      /** Initial Balance */
+      initial_balance: number | string;
+      /** Purpose */
+      purpose?: string | null;
+      /** Goal Amount */
+      goal_amount?: number | string | null;
+      /** Goal Date */
+      goal_date?: string | null;
+      /** Annual Contribution Limit */
+      annual_contribution_limit?: number | string | null;
+      /** Limit Year */
+      limit_year?: number | null;
+    };
+    /** AccountResponse */
+    AccountResponse: {
+      /** Id */
+      id: string;
+      /** Name */
+      name: string;
+      account_type: components['schemas']['AccountType'];
+      /** Current Balance */
+      current_balance: string;
+      /** Purpose */
+      purpose: string | null;
+      /** Goal Amount */
+      goal_amount: string | null;
+      /** Goal Date */
+      goal_date: string | null;
+      /** Annual Contribution Limit */
+      annual_contribution_limit: string | null;
+      /** Limit Year */
+      limit_year: number | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /**
+     * AccountType
+     * @enum {string}
+     */
+    AccountType: 'cash' | 'investment' | 'rrsp' | 'tfsa';
+    /** AccountUpdate */
+    AccountUpdate: {
+      /** Name */
+      name?: string | null;
+      /** Purpose */
+      purpose?: string | null;
+      /** Goal Amount */
+      goal_amount?: number | string | null;
+      /** Goal Date */
+      goal_date?: string | null;
+      /** Annual Contribution Limit */
+      annual_contribution_limit?: number | string | null;
+      /** Limit Year */
+      limit_year?: number | null;
+    };
+    /** AccountWithHistory */
+    AccountWithHistory: {
+      account: components['schemas']['AccountResponse'];
+      /** History */
+      history: components['schemas']['LedgerEventResponse'][];
+      /** Remaining Contribution Room */
+      remaining_contribution_room?: string | null;
+    };
     /** DashboardResponse */
     DashboardResponse: {
       /**
@@ -380,6 +521,11 @@ export interface components {
       /** Notes */
       notes?: string | null;
     };
+    /**
+     * EventType
+     * @enum {string}
+     */
+    EventType: 'contribute' | 'withdraw' | 'update_balance';
     /** ExpenseCreate */
     ExpenseCreate: {
       /** Category */
@@ -440,6 +586,44 @@ export interface components {
       event_date: string;
       /** Notes */
       notes?: string | null;
+    };
+    /** LedgerEventCreate */
+    LedgerEventCreate: {
+      event_type: components['schemas']['EventType'];
+      /** Amount */
+      amount?: number | string | null;
+      /** Balance Snapshot */
+      balance_snapshot?: number | string | null;
+      /** Source */
+      source?: string | null;
+      /** Event Date */
+      event_date?: string | null;
+      /** Notes */
+      notes?: string | null;
+    };
+    /** LedgerEventResponse */
+    LedgerEventResponse: {
+      /** Id */
+      id: string;
+      event_type: components['schemas']['EventType'];
+      /** Amount */
+      amount: string | null;
+      /** Balance Snapshot */
+      balance_snapshot: string;
+      /** Source */
+      source: string | null;
+      /**
+       * Event Date
+       * Format: date-time
+       */
+      event_date: string;
+      /** Notes */
+      notes: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
     };
     /** OnboardingCompleteResponse */
     OnboardingCompleteResponse: {
@@ -837,6 +1021,191 @@ export interface operations {
           'application/json': {
             [key: string]: unknown;
           };
+        };
+      };
+    };
+  };
+  get_accounts_accounts__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountResponse'][];
+        };
+      };
+    };
+  };
+  create_account_accounts__post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AccountCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_account_accounts__account_id__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  update_account_accounts__account_id__put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AccountUpdate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  add_ledger_event_accounts__account_id__events_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LedgerEventCreate'];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['LedgerEventResponse'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  get_account_history_accounts__account_id__history_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountWithHistory'];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
         };
       };
     };

@@ -6,6 +6,8 @@ from clerkk_backend.models.income_source import IncomeSource
 from clerkk_backend.models.income_event import IncomeEvent
 from clerkk_backend.models.expense import Expense
 from clerkk_backend.models.expense_history import ExpenseHistory
+from clerkk_backend.models.debt import UserDebt
+from clerkk_backend.models.account import UserAccount, AccountLedger
 
 __all__ = [
     "Base",
@@ -15,4 +17,7 @@ __all__ = [
     "IncomeEvent",
     "Expense",
     "ExpenseHistory",
+    "UserDebt",
+    "UserAccount",
+    "AccountLedger",
 ]
