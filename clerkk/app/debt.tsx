@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth0} from 'react-native-auth0';
 import {Currency} from '../components';
 import {api} from '../config/api';
+import CurrencyInput from '../components/CurrencyInput';
 
 const MULTI_CURRENCY_KEY = '@clerkk_multi_currency';
 const CONVERT_DEBT_KEY = '@clerkk_convert_debt_to_local';
@@ -387,45 +388,30 @@ export default function DebtScreen() {
 
               {/* Current Balance */}
               <Text style={styles.inputLabel}>Current Balance</Text>
-              <View style={styles.inputWithPrefix}>
-                <Text style={styles.inputPrefix}>{getCurrencySymbol()}</Text>
-                <TextInput
-                  style={styles.inputWithPrefixField}
-                  value={balance}
-                  onChangeText={setBalance}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                />
-              </View>
+              <CurrencyInput
+                prefix={getCurrencySymbol()}
+                value={balance}
+                onChangeText={setBalance}
+                placeholder="0"
+              />
 
               {/* Monthly Payment */}
               <Text style={styles.inputLabel}>Monthly Payment</Text>
-              <View style={styles.inputWithPrefix}>
-                <Text style={styles.inputPrefix}>{getCurrencySymbol()}</Text>
-                <TextInput
-                  style={styles.inputWithPrefixField}
-                  value={monthlyPayment}
-                  onChangeText={setMonthlyPayment}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                />
-              </View>
+              <CurrencyInput
+                prefix={getCurrencySymbol()}
+                value={monthlyPayment}
+                onChangeText={setMonthlyPayment}
+                placeholder="0"
+              />
 
               {/* Interest Rate */}
               <Text style={styles.inputLabel}>Interest Rate</Text>
-              <View style={styles.inputWithPrefix}>
-                <TextInput
-                  style={styles.inputWithPrefixField}
-                  value={interestRate}
-                  onChangeText={setInterestRate}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                />
-                <Text style={styles.inputSuffix}>%</Text>
-              </View>
+              <CurrencyInput
+                suffix="%"
+                value={interestRate}
+                onChangeText={setInterestRate}
+                placeholder="0"
+              />
 
               {/* Toggle Additional Fields */}
               <TouchableOpacity
@@ -451,19 +437,12 @@ export default function DebtScreen() {
                 <>
                   {/* Original Principal */}
                   <Text style={styles.inputLabel}>Original Loan Amount</Text>
-                  <View style={styles.inputWithPrefix}>
-                    <Text style={styles.inputPrefix}>
-                      {getCurrencySymbol()}
-                    </Text>
-                    <TextInput
-                      style={styles.inputWithPrefixField}
-                      value={originalPrincipal}
-                      onChangeText={setOriginalPrincipal}
-                      placeholder="0"
-                      keyboardType="decimal-pad"
-                      placeholderTextColor="#999"
-                    />
-                  </View>
+                  <CurrencyInput
+                    prefix={getCurrencySymbol()}
+                    value={originalPrincipal}
+                    onChangeText={setOriginalPrincipal}
+                    placeholder="0"
+                  />
 
                   {/* Term Months */}
                   <Text style={styles.inputLabel}>Loan Term (months)</Text>
@@ -557,17 +536,12 @@ export default function DebtScreen() {
             <ScrollView style={styles.modalContent}>
               {/* Original Principal */}
               <Text style={styles.inputLabel}>Original Loan Amount</Text>
-              <View style={styles.inputWithPrefix}>
-                <Text style={styles.inputPrefix}>{getCurrencySymbol()}</Text>
-                <TextInput
-                  style={styles.inputWithPrefixField}
-                  value={originalPrincipal}
-                  onChangeText={setOriginalPrincipal}
-                  placeholder="0"
-                  keyboardType="decimal-pad"
-                  placeholderTextColor="#999"
-                />
-              </View>
+              <CurrencyInput
+                prefix={getCurrencySymbol()}
+                value={originalPrincipal}
+                onChangeText={setOriginalPrincipal}
+                placeholder="0"
+              />
 
               {/* Term Months */}
               <Text style={styles.inputLabel}>Loan Term (months)</Text>
@@ -814,31 +788,6 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#000',
-  },
-  inputWithPrefix: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-  },
-  inputPrefix: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginRight: 4,
-  },
-  inputSuffix: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-    marginLeft: 4,
-  },
-  inputWithPrefixField: {
-    flex: 1,
     padding: 16,
     fontSize: 16,
     color: '#000',

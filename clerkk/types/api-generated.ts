@@ -258,7 +258,8 @@ export interface paths {
     /** Update Account */
     put: operations['update_account_accounts__account_id__put'];
     post?: never;
-    delete?: never;
+    /** Delete Account */
+    delete: operations['delete_account_accounts__account_id__delete'];
     options?: never;
     head?: never;
     patch?: never;
@@ -373,6 +374,10 @@ export interface components {
       annual_contribution_limit: string | null;
       /** Limit Year */
       limit_year: number | null;
+      /** Contributions This Year */
+      contributions_this_year?: string | null;
+      /** Remaining Contribution Room */
+      remaining_contribution_room?: string | null;
       /**
        * Created At
        * Format: date-time
@@ -1132,6 +1137,35 @@ export interface operations {
         content: {
           'application/json': components['schemas']['AccountResponse'];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['HTTPValidationError'];
+        };
+      };
+    };
+  };
+  delete_account_accounts__account_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Validation Error */
       422: {

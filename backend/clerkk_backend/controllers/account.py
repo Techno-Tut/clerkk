@@ -78,6 +78,18 @@ async def add_ledger_event(
     return result
 
 
+@router.delete("/{account_id}", status_code=204)
+@inject
+async def delete_account(
+    account_id: str,
+    current_user: dict = Depends(get_current_user),
+    service: AccountService = Depends(Provide[Container.account_service]),
+):
+    success = service.delete_account(account_id, current_user["id"])
+    if not success:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+
 @router.get("/{account_id}/history", response_model=AccountWithHistory)
 @inject
 async def get_account_history(

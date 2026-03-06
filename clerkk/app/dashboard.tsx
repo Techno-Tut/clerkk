@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
@@ -16,10 +17,33 @@ import {useState, useEffect, useCallback} from 'react';
 import {useAuth0} from 'react-native-auth0';
 import {useRouter, Stack, useFocusEffect} from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-controller';
+import {
+  KeyboardAwareScrollView,
+  useReanimatedKeyboardAnimation,
+} from 'react-native-keyboard-controller';
 import {api} from '../config/api';
+import CurrencyInput from '../components/CurrencyInput';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import Currency from '../components/Currency';
+
+const ACCOUNT_CONFIG: Record<
+  string,
+  {icon: string; color: string; bgColor: string}
+> = {
+  'Emergency Fund': {
+    icon: 'alert-circle-outline',
+    color: '#FF9800',
+    bgColor: '#FFF3E0',
+  },
+  cash: {icon: 'wallet-outline', color: '#4CAF50', bgColor: '#f0f9f4'},
+  tfsa: {
+    icon: 'shield-checkmark-outline',
+    color: '#4CAF50',
+    bgColor: '#f0f9f4',
+  },
+  rrsp: {icon: 'trending-up-outline', color: '#4CAF50', bgColor: '#f0f9f4'},
+  investment: {icon: 'bar-chart-outline', color: '#4CAF50', bgColor: '#f0f9f4'},
+};
 
 export default function Home() {
   const {user, clearSession, clearCredentials, getCredentials} = useAuth0();
@@ -41,14 +65,22 @@ export default function Home() {
   const [selectedAccount, setSelectedAccount] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountType, setNewAccountType] = useState<'investment' | 'cash'>(
-    'cash',
-  );
+  const [newAccountType, setNewAccountType] = useState<
+    'investment' | 'cash' | 'tfsa' | 'rrsp'
+  >('cash');
   const [newAccountBalance, setNewAccountBalance] = useState('');
+  const [showAccountForm, setShowAccountForm] = useState(false);
   const [newBalance, setNewBalance] = useState('');
   const [paycheckAmount, setPaycheckAmount] = useState('');
   const [paycheckDate, setPaycheckDate] = useState('Today');
   const [paycheckSource, setPaycheckSource] = useState('');
+  const [showSetLimitModal, setShowSetLimitModal] = useState(false);
+  const [limitAmount, setLimitAmount] = useState('');
+  const [limitYear, setLimitYear] = useState(
+    new Date().getFullYear().toString(),
+  );
+
+  const {height: keyboardHeight} = useReanimatedKeyboardAnimation();
 
   useEffect(() => {
     fetchStats();
@@ -345,30 +377,25 @@ export default function Home() {
       ) : (
         <>
           {accounts.map(account => {
-            const getAccountIcon = (type: string) => {
-              switch (type) {
-                case 'cash':
-                  return 'wallet-outline';
-                case 'tfsa':
-                  return 'shield-checkmark-outline';
-                case 'rrsp':
-                  return 'trending-up-outline';
-                case 'investment':
-                  return 'bar-chart-outline';
-                default:
-                  return 'wallet-outline';
-              }
-            };
+            const config =
+              ACCOUNT_CONFIG[account.name] ||
+              ACCOUNT_CONFIG[account.account_type] ||
+              ACCOUNT_CONFIG.cash;
 
             return (
               <View key={account.id} style={styles.accountCard}>
                 <View style={styles.accountHeader}>
                   <View style={styles.accountLeft}>
-                    <View style={styles.accountIconContainer}>
+                    <View
+                      style={[
+                        styles.accountIconContainer,
+                        {backgroundColor: config.bgColor},
+                      ]}
+                    >
                       <Ionicons
-                        name={getAccountIcon(account.account_type)}
+                        name={config.icon}
                         size={24}
-                        color="#4CAF50"
+                        color={config.color}
                       />
                     </View>
                     <View>
@@ -382,6 +409,64 @@ export default function Home() {
                     ${parseFloat(account.current_balance).toLocaleString()}
                   </Text>
                 </View>
+
+                {/* Progress bar or prompt for TFSA/RRSP */}
+                {(account.account_type === 'tfsa' ||
+                  account.account_type === 'rrsp') && (
+                  <>
+                    {account.annual_contribution_limit &&
+                    account.contributions_this_year !== null ? (
+                      <View style={styles.progressContainer}>
+                        <View style={styles.progressBar}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                width: `${Math.min(
+                                  100,
+                                  (parseFloat(account.contributions_this_year) /
+                                    parseFloat(
+                                      account.annual_contribution_limit,
+                                    )) *
+                                    100,
+                                )}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.progressText}>
+                          $
+                          {parseFloat(
+                            account.contributions_this_year,
+                          ).toLocaleString()}{' '}
+                          of $
+                          {parseFloat(
+                            account.annual_contribution_limit,
+                          ).toLocaleString()}{' '}
+                          contributed ({account.limit_year})
+                        </Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.limitPrompt}
+                        onPress={() => {
+                          setSelectedAccountId(account.id);
+                          setShowSetLimitModal(true);
+                        }}
+                      >
+                        <Ionicons
+                          name="information-circle-outline"
+                          size={16}
+                          color="#FF9800"
+                        />
+                        <Text style={styles.limitPromptText}>
+                          Set your annual contribution limit to track progress
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+
                 <View style={styles.accountActions}>
                   <TouchableOpacity
                     style={styles.accountButton}
@@ -606,119 +691,223 @@ export default function Home() {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Add Account</Text>
-                <TouchableOpacity onPress={() => setShowAddAccountModal(false)}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowAddAccountModal(false);
+                    setShowAccountForm(false);
+                  }}
+                >
                   <Ionicons name="close" size={24} color="#000" />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.modalLabel}>Account Name</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g., Emergency Fund"
-                value={newAccountName}
-                onChangeText={setNewAccountName}
-              />
-              <Text style={styles.modalLabel}>Type</Text>
-              <View style={styles.typeSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    newAccountType === 'cash' && styles.typeButtonActive,
-                  ]}
-                  onPress={() => setNewAccountType('cash')}
-                >
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      newAccountType === 'cash' && styles.typeButtonTextActive,
-                    ]}
-                  >
-                    Cash
+
+              {!showAccountForm ? (
+                <>
+                  <Text style={styles.modalSectionTitle}>
+                    Registered Accounts
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    newAccountType === 'tfsa' && styles.typeButtonActive,
-                  ]}
-                  onPress={() => setNewAccountType('tfsa')}
-                >
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      newAccountType === 'tfsa' && styles.typeButtonTextActive,
-                    ]}
+                  <TouchableOpacity
+                    style={styles.quickAccountButton}
+                    onPress={async () => {
+                      try {
+                        const creds = await getCredentials();
+                        await api.accounts.create(
+                          {
+                            name: 'TFSA',
+                            account_type: 'tfsa',
+                            initial_balance: 0,
+                          },
+                          creds.accessToken,
+                        );
+                        setShowAddAccountModal(false);
+                        fetchAccounts();
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to create TFSA');
+                      }
+                    }}
                   >
-                    TFSA
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    newAccountType === 'rrsp' && styles.typeButtonActive,
-                  ]}
-                  onPress={() => setNewAccountType('rrsp')}
-                >
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      newAccountType === 'rrsp' && styles.typeButtonTextActive,
-                    ]}
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={24}
+                      color="#4CAF50"
+                    />
+                    <View style={{flex: 1}}>
+                      <Text style={styles.quickAccountButtonText}>TFSA</Text>
+                      <Text style={styles.quickAccountButtonSubtext}>
+                        Tax-free growth & withdrawals
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quickAccountButton}
+                    onPress={async () => {
+                      try {
+                        const creds = await getCredentials();
+                        await api.accounts.create(
+                          {
+                            name: 'RRSP',
+                            account_type: 'rrsp',
+                            initial_balance: 0,
+                          },
+                          creds.accessToken,
+                        );
+                        setShowAddAccountModal(false);
+                        fetchAccounts();
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to create RRSP');
+                      }
+                    }}
                   >
-                    RRSP
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeButton,
-                    newAccountType === 'investment' && styles.typeButtonActive,
-                  ]}
-                  onPress={() => setNewAccountType('investment')}
-                >
-                  <Text
-                    style={[
-                      styles.typeButtonText,
-                      newAccountType === 'investment' &&
-                        styles.typeButtonTextActive,
-                    ]}
+                    <Ionicons
+                      name="trending-up-outline"
+                      size={24}
+                      color="#4CAF50"
+                    />
+                    <View style={{flex: 1}}>
+                      <Text style={styles.quickAccountButtonText}>RRSP</Text>
+                      <Text style={styles.quickAccountButtonSubtext}>
+                        Tax deduction now, taxed on withdrawal
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <Text style={styles.modalSectionTitle}>Other Accounts</Text>
+                  <TouchableOpacity
+                    style={styles.quickAccountButton}
+                    onPress={async () => {
+                      try {
+                        const creds = await getCredentials();
+                        await api.accounts.create(
+                          {
+                            name: 'Emergency Fund',
+                            account_type: 'cash',
+                            initial_balance: 0,
+                          },
+                          creds.accessToken,
+                        );
+                        setShowAddAccountModal(false);
+                        fetchAccounts();
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to create Emergency Fund');
+                      }
+                    }}
                   >
-                    Investment
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Current Balance</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="$0.00"
-                keyboardType="numeric"
-                value={newAccountBalance}
-                onChangeText={setNewAccountBalance}
-              />
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={async () => {
-                  try {
-                    const creds = await getCredentials();
-                    await api.accounts.create(
-                      {
-                        name: newAccountName,
-                        account_type: newAccountType,
-                        initial_balance: parseFloat(newAccountBalance),
-                      },
-                      creds.accessToken,
-                    );
-                    setNewAccountName('');
-                    setNewAccountType('cash');
-                    setNewAccountBalance('');
-                    setShowAddAccountModal(false);
-                    fetchAccounts();
-                  } catch (error) {
-                    console.error('Failed to create account:', error);
-                    Alert.alert('Error', 'Failed to create account');
-                  }
-                }}
-              >
-                <Text style={styles.modalButtonText}>Add Account</Text>
-              </TouchableOpacity>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={24}
+                      color="#FF9800"
+                    />
+                    <View style={{flex: 1}}>
+                      <Text style={styles.quickAccountButtonText}>
+                        Emergency Fund
+                      </Text>
+                      <Text style={styles.quickAccountButtonSubtext}>
+                        3-6 months expenses
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quickAccountButton}
+                    onPress={() => setShowAccountForm(true)}
+                  >
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={24}
+                      color="#666"
+                    />
+                    <View style={{flex: 1}}>
+                      <Text
+                        style={[styles.quickAccountButtonText, {color: '#666'}]}
+                      >
+                        Cash or Investment Account
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.modalLabel}>Account Name</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="e.g., Emergency Fund"
+                    value={newAccountName}
+                    onChangeText={setNewAccountName}
+                  />
+                  <Text style={styles.modalLabel}>Type</Text>
+                  <View style={styles.typeSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.typeButton,
+                        newAccountType === 'cash' && styles.typeButtonActive,
+                      ]}
+                      onPress={() => setNewAccountType('cash')}
+                    >
+                      <Text
+                        style={[
+                          styles.typeButtonText,
+                          newAccountType === 'cash' &&
+                            styles.typeButtonTextActive,
+                        ]}
+                      >
+                        Cash
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.typeButton,
+                        newAccountType === 'investment' &&
+                          styles.typeButtonActive,
+                      ]}
+                      onPress={() => setNewAccountType('investment')}
+                    >
+                      <Text
+                        style={[
+                          styles.typeButtonText,
+                          newAccountType === 'investment' &&
+                            styles.typeButtonTextActive,
+                        ]}
+                      >
+                        Investment
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.modalLabel}>Current Balance</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="$0.00"
+                    keyboardType="numeric"
+                    value={newAccountBalance}
+                    onChangeText={setNewAccountBalance}
+                  />
+                  <TouchableOpacity
+                    style={styles.modalButton}
+                    onPress={async () => {
+                      try {
+                        const creds = await getCredentials();
+                        await api.accounts.create(
+                          {
+                            name: newAccountName,
+                            account_type: newAccountType,
+                            initial_balance: parseFloat(newAccountBalance),
+                          },
+                          creds.accessToken,
+                        );
+                        setNewAccountName('');
+                        setNewAccountType('cash');
+                        setNewAccountBalance('');
+                        setShowAddAccountModal(false);
+                        setShowAccountForm(false);
+                        fetchAccounts();
+                      } catch (error) {
+                        console.error('Failed to create account:', error);
+                        Alert.alert('Error', 'Failed to create account');
+                      }
+                    }}
+                  >
+                    <Text style={styles.modalButtonText}>Add Account</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </KeyboardAwareScrollView>
         </View>
@@ -787,60 +976,61 @@ export default function Home() {
 
       <Modal visible={showContributeModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <KeyboardAwareScrollView
-            contentContainerStyle={{flex: 1, justifyContent: 'flex-end'}}
+          <TouchableOpacity
+            style={{flex: 1}}
+            activeOpacity={1}
+            onPress={() => setShowContributeModal(false)}
+          />
+          <View
+            style={[
+              styles.modalContent,
+              {paddingBottom: 40 + (Platform.OS === 'ios' ? 0 : 0)},
+            ]}
           >
-            <TouchableOpacity
-              style={{flex: 1}}
-              activeOpacity={1}
-              onPress={() => setShowContributeModal(false)}
-            />
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  Contribute to{' '}
-                  <Text style={styles.modalTitleHighlight}>
-                    {selectedAccount}
-                  </Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                Contribute to{' '}
+                <Text style={styles.modalTitleHighlight}>
+                  {selectedAccount}
                 </Text>
-                <TouchableOpacity onPress={() => setShowContributeModal(false)}>
-                  <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Amount</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="$0.00"
-                keyboardType="numeric"
-                value={amount}
-                onChangeText={setAmount}
-              />
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={async () => {
-                  try {
-                    const creds = await getCredentials();
-                    await api.accounts.addEvent(
-                      selectedAccountId,
-                      {
-                        event_type: 'contribute',
-                        amount: parseFloat(amount),
-                      },
-                      creds.accessToken,
-                    );
-                    setAmount('');
-                    setShowContributeModal(false);
-                    fetchAccounts();
-                  } catch (error) {
-                    console.error('Failed to contribute:', error);
-                    Alert.alert('Error', 'Failed to add contribution');
-                  }
-                }}
-              >
-                <Text style={styles.modalButtonText}>Contribute</Text>
+              </Text>
+              <TouchableOpacity onPress={() => setShowContributeModal(false)}>
+                <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
-          </KeyboardAwareScrollView>
+            <Text style={styles.modalLabel}>Amount</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="$0.00"
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={setAmount}
+            />
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={async () => {
+                try {
+                  const creds = await getCredentials();
+                  await api.accounts.addEvent(
+                    selectedAccountId,
+                    {
+                      event_type: 'contribute',
+                      amount: parseFloat(amount),
+                    },
+                    creds.accessToken,
+                  );
+                  setAmount('');
+                  setShowContributeModal(false);
+                  fetchAccounts();
+                } catch (error) {
+                  console.error('Failed to contribute:', error);
+                  Alert.alert('Error', 'Failed to add contribution');
+                }
+              }}
+            >
+              <Text style={styles.modalButtonText}>Contribute</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 
@@ -897,6 +1087,74 @@ export default function Home() {
                 }}
               >
                 <Text style={styles.modalButtonText}>Withdraw</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAwareScrollView>
+        </View>
+      </Modal>
+
+      <Modal visible={showSetLimitModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <KeyboardAwareScrollView
+            contentContainerStyle={{flex: 1, justifyContent: 'flex-end'}}
+          >
+            <TouchableOpacity
+              style={{flex: 1}}
+              activeOpacity={1}
+              onPress={() => setShowSetLimitModal(false)}
+            />
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  Set{' '}
+                  <Text style={styles.modalTitleHighlight}>
+                    {accounts.find(a => a.id === selectedAccountId)?.name}
+                  </Text>{' '}
+                  Contribution Limit
+                </Text>
+                <TouchableOpacity onPress={() => setShowSetLimitModal(false)}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.modalLabel}>Annual Contribution Limit</Text>
+              <CurrencyInput
+                prefix="$"
+                placeholder="7000"
+                value={limitAmount}
+                onChangeText={setLimitAmount}
+              />
+              <Text style={styles.modalLabel}>Year</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="2026"
+                value={limitYear}
+                onChangeText={setLimitYear}
+                keyboardType="numeric"
+              />
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={async () => {
+                  try {
+                    const creds = await getCredentials();
+                    await api.accounts.update(
+                      selectedAccountId,
+                      {
+                        annual_contribution_limit: parseFloat(limitAmount),
+                        limit_year: parseInt(limitYear),
+                      },
+                      creds.accessToken,
+                    );
+                    setShowSetLimitModal(false);
+                    setLimitAmount('');
+                    setLimitYear(new Date().getFullYear().toString());
+                    fetchAccounts();
+                  } catch (error) {
+                    console.error('Failed to set limit:', error);
+                    Alert.alert('Error', 'Failed to set limit');
+                  }
+                }}
+              >
+                <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </KeyboardAwareScrollView>
@@ -1226,6 +1484,66 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#000',
+  },
+  progressContainer: {
+    marginBottom: 12,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 11,
+    color: '#666',
+  },
+  limitPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  limitPromptText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#E65100',
+  },
+  modalSectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    textTransform: 'uppercase',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  quickAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 12,
+  },
+  quickAccountButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  quickAccountButtonSubtext: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
   accountActions: {
     flexDirection: 'row',

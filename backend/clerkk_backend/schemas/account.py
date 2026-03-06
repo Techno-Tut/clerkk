@@ -35,6 +35,8 @@ class AccountResponse(BaseModel):
     goal_date: Optional[date]
     annual_contribution_limit: Optional[Decimal]
     limit_year: Optional[int]
+    contributions_this_year: Optional[Decimal] = None
+    remaining_contribution_room: Optional[Decimal] = None
     created_at: datetime
 
     class Config:

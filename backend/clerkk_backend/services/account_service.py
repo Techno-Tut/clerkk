@@ -54,12 +54,22 @@ class AccountService:
             session.add(initial_entry)
             session.commit()
 
-            return self._to_account_response(account, account_data.initial_balance)
+            contributions_this_year, remaining_room = (
+                self._calculate_contribution_stats(session, account)
+            )
+            return self._to_account_response(
+                account,
+                account_data.initial_balance,
+                contributions_this_year,
+                remaining_room,
+            )
 
     def get_user_accounts(self, user_id: str) -> list[AccountResponse]:
         with self.database.session() as session:
             accounts = (
-                session.query(UserAccount).filter(UserAccount.user_id == user_id).all()
+                session.query(UserAccount)
+                .filter(UserAccount.user_id == user_id, UserAccount.is_active == True)
+                .all()
             )
             return [
                 self._get_account_with_balance(session, account) for account in accounts
@@ -134,6 +144,21 @@ class AccountService:
 
             return self._to_ledger_response(entry)
 
+    def delete_account(self, account_id: str, user_id: str) -> bool:
+        """Soft delete account by setting is_active=False"""
+        with self.database.session() as session:
+            account = (
+                session.query(UserAccount)
+                .filter(UserAccount.id == account_id, UserAccount.user_id == user_id)
+                .first()
+            )
+            if not account:
+                return False
+
+            account.is_active = False
+            session.commit()
+            return True
+
     def get_account_history(
         self, account_id: str, user_id: str
     ) -> Optional[AccountWithHistory]:
@@ -198,14 +223,47 @@ class AccountService:
 
         return account.annual_contribution_limit - contributed
 
+    def _calculate_contribution_stats(
+        self, session: Session, account: UserAccount
+    ) -> tuple[Decimal | None, Decimal | None]:
+        """Calculate contributions_this_year and remaining_room for TFSA/RRSP accounts"""
+        if (
+            account.account_type not in [AccountType.RRSP, AccountType.TFSA]
+            or not account.annual_contribution_limit
+            or not account.limit_year
+        ):
+            return None, None
+
+        contributions_this_year = (
+            session.query(func.sum(AccountLedger.amount))
+            .filter(
+                AccountLedger.account_id == account.id,
+                AccountLedger.event_type == EventType.CONTRIBUTE,
+                extract("year", AccountLedger.event_date) == account.limit_year,
+            )
+            .scalar()
+        ) or Decimal("0")
+
+        remaining_room = account.annual_contribution_limit - contributions_this_year
+        return contributions_this_year, remaining_room
+
     def _get_account_with_balance(
         self, session: Session, account: UserAccount
     ) -> AccountResponse:
         current_balance = self._get_current_balance(session, account.id)
-        return self._to_account_response(account, current_balance)
+        contributions_this_year, remaining_room = self._calculate_contribution_stats(
+            session, account
+        )
+        return self._to_account_response(
+            account, current_balance, contributions_this_year, remaining_room
+        )
 
     def _to_account_response(
-        self, account: UserAccount, current_balance: Decimal
+        self,
+        account: UserAccount,
+        current_balance: Decimal,
+        contributions_this_year: Optional[Decimal] = None,
+        remaining_room: Optional[Decimal] = None,
     ) -> AccountResponse:
         return AccountResponse(
             id=str(account.id),
@@ -217,6 +275,8 @@ class AccountService:
             goal_date=account.goal_date,
             annual_contribution_limit=account.annual_contribution_limit,
             limit_year=account.limit_year,
+            contributions_this_year=contributions_this_year,
+            remaining_contribution_room=remaining_room,
             created_at=account.created_at,
         )
 

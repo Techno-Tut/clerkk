@@ -226,5 +226,8 @@ export const api = {
         {},
         token,
       ),
+
+    delete: (id: string, token: string) =>
+      request(`/accounts/${id}`, {method: 'DELETE'}, token),
   },
 };

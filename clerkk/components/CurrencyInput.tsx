@@ -1,64 +1,54 @@
-import {View, Text, TextInput, StyleSheet} from 'react-native';
+import React from 'react';
+import {View, TextInput, Text, StyleSheet, TextInputProps} from 'react-native';
 
-interface CurrencyInputProps {
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder?: string;
-  label?: string;
-  autoFocus?: boolean;
-  style?: object;
+interface CurrencyInputProps extends TextInputProps {
+  prefix?: string;
+  suffix?: string;
 }
 
 export default function CurrencyInput({
-  value,
-  onChangeText,
-  placeholder = '0',
-  label,
-  autoFocus,
+  prefix,
+  suffix,
   style,
+  ...props
 }: CurrencyInputProps) {
   return (
-    <View style={style}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputContainer}>
-        <Text style={styles.currency}>$</Text>
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          keyboardType="numeric"
-          autoFocus={autoFocus}
-        />
-      </View>
+    <View style={styles.container}>
+      {prefix && <Text style={styles.prefix}>{prefix}</Text>}
+      <TextInput
+        style={[styles.input, style]}
+        keyboardType="decimal-pad"
+        placeholderTextColor="#999"
+        {...props}
+      />
+      {suffix && <Text style={styles.suffix}>{suffix}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#000',
-  },
-  inputContainer: {
+  container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#000',
+    backgroundColor: '#f5f5f5',
     borderRadius: 12,
-    padding: 16,
+    marginBottom: 16,
   },
-  currency: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginRight: 8,
+  prefix: {
+    fontSize: 16,
+    color: '#666',
+    paddingLeft: 16,
+  },
+  suffix: {
+    fontSize: 16,
+    color: '#666',
+    paddingRight: 16,
   },
   input: {
     flex: 1,
-    fontSize: 20,
-    fontWeight: '600',
+    backgroundColor: 'transparent',
+    padding: 16,
+    fontSize: 16,
+    color: '#000',
   },
 });

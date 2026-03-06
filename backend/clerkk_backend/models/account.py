@@ -6,6 +6,7 @@ from sqlalchemy import (
     Date,
     Integer,
     Text,
+    Boolean,
     ForeignKey,
     Enum as SQLEnum,
 )
@@ -47,6 +48,7 @@ class UserAccount(Base):
     goal_date = Column(Date, nullable=True)
     annual_contribution_limit = Column(Numeric(12, 2), nullable=True)
     limit_year = Column(Integer, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
