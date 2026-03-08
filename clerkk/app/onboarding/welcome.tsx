@@ -1,5 +1,5 @@
 import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
-import {useRouter} from 'expo-router';
+import {useRouter, Redirect} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Button} from '@/components';
 import {useAuth0} from 'react-native-auth0';
@@ -8,8 +8,13 @@ import {useState} from 'react';
 
 export default function Welcome() {
   const router = useRouter();
-  const {authorize, getCredentials} = useAuth0();
+  const {authorize, getCredentials, user} = useAuth0();
   const [loading, setLoading] = useState(false);
+
+  // If already logged in, redirect to income
+  if (user) {
+    return <Redirect href="/onboarding/income" />;
+  }
 
   const handleGetStarted = () => {
     router.push('/onboarding/income');

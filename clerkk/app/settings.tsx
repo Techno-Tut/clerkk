@@ -11,6 +11,7 @@ import {useState, useEffect} from 'react';
 import {useRouter} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useUser} from '@/contexts/UserContext';
 
 const DEV_MODE_KEY = '@clerkk_dev_mode';
 const API_URL_KEY = '@clerkk_api_url';
@@ -21,10 +22,12 @@ interface SettingItem {
   id: string;
   label: string;
   description?: string;
-  type: 'toggle' | 'input';
-  storageKey: string;
+  type: 'toggle' | 'input' | 'button';
+  storageKey?: string;
   defaultValue?: any;
   showWhen?: string;
+  action?: () => void | Promise<void>;
+  buttonStyle?: 'primary' | 'destructive';
 }
 
 interface SettingSection {
@@ -72,12 +75,21 @@ const SETTINGS_CONFIG: SettingSection[] = [
         defaultValue: 'http://localhost:8000',
         showWhen: 'devMode',
       },
+      {
+        id: 'clearCache',
+        label: 'Clear User Cache',
+        description: 'Clear cached profile to test onboarding',
+        type: 'button',
+        buttonStyle: 'destructive',
+        showWhen: 'devMode',
+      },
     ],
   },
 ];
 
 export default function Settings() {
   const router = useRouter();
+  const {clearCache} = useUser();
   const [settings, setSettings] = useState<Record<string, any>>({});
 
   useEffect(() => {
@@ -201,6 +213,60 @@ export default function Settings() {
                     );
                   }
 
+                  if (item.type === 'button') {
+                    return (
+                      <View key={item.id}>
+                        {itemIndex > 0 && <View style={styles.divider} />}
+                        <View style={styles.buttonRow}>
+                          <View style={styles.buttonInfo}>
+                            <Text style={styles.buttonLabel}>{item.label}</Text>
+                            {item.description && (
+                              <Text style={styles.buttonDescription}>
+                                {item.description}
+                              </Text>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            style={[
+                              styles.actionButton,
+                              item.buttonStyle === 'destructive' &&
+                                styles.destructiveButton,
+                            ]}
+                            onPress={async () => {
+                              if (item.id === 'clearCache') {
+                                Alert.alert(
+                                  'Clear Cache',
+                                  'This will clear cached profile data. Restart app to test.',
+                                  [
+                                    {text: 'Cancel', style: 'cancel'},
+                                    {
+                                      text: 'Clear',
+                                      style: 'destructive',
+                                      onPress: async () => {
+                                        await clearCache();
+                                        Alert.alert('Success', 'Cache cleared');
+                                      },
+                                    },
+                                  ],
+                                );
+                              }
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.actionButtonText,
+                                item.buttonStyle === 'destructive' &&
+                                  styles.destructiveButtonText,
+                              ]}
+                            >
+                              {item.label}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    );
+                  }
+
                   return null;
                 })}
               </View>
@@ -306,5 +372,37 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '600',
+  },
+  buttonRow: {
+    padding: 16,
+  },
+  buttonInfo: {
+    marginBottom: 12,
+  },
+  buttonLabel: {
+    fontSize: 17,
+    color: '#000',
+    marginBottom: 4,
+  },
+  buttonDescription: {
+    fontSize: 13,
+    color: '#666',
+  },
+  actionButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+  },
+  destructiveButton: {
+    backgroundColor: '#FF3B30',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  destructiveButtonText: {
+    color: '#fff',
   },
 });

@@ -170,10 +170,6 @@ export default function DebtScreen() {
     return !debt.original_principal || !debt.term_months || !debt.start_date;
   };
 
-  const getCurrencySymbol = () => {
-    return CURRENCIES.find(c => c.value === currency)?.symbol || '$';
-  };
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -389,7 +385,7 @@ export default function DebtScreen() {
               {/* Current Balance */}
               <Text style={styles.inputLabel}>Current Balance</Text>
               <CurrencyInput
-                prefix={getCurrencySymbol()}
+                currency={currency}
                 value={balance}
                 onChangeText={setBalance}
                 placeholder="0"
@@ -398,7 +394,7 @@ export default function DebtScreen() {
               {/* Monthly Payment */}
               <Text style={styles.inputLabel}>Monthly Payment</Text>
               <CurrencyInput
-                prefix={getCurrencySymbol()}
+                currency={currency}
                 value={monthlyPayment}
                 onChangeText={setMonthlyPayment}
                 placeholder="0"
@@ -438,7 +434,7 @@ export default function DebtScreen() {
                   {/* Original Principal */}
                   <Text style={styles.inputLabel}>Original Loan Amount</Text>
                   <CurrencyInput
-                    prefix={getCurrencySymbol()}
+                    currency={currency}
                     value={originalPrincipal}
                     onChangeText={setOriginalPrincipal}
                     placeholder="0"
@@ -537,7 +533,7 @@ export default function DebtScreen() {
               {/* Original Principal */}
               <Text style={styles.inputLabel}>Original Loan Amount</Text>
               <CurrencyInput
-                prefix={getCurrencySymbol()}
+                currency={currency}
                 value={originalPrincipal}
                 onChangeText={setOriginalPrincipal}
                 placeholder="0"

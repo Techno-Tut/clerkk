@@ -13,7 +13,7 @@ import {useRouter} from 'expo-router';
 import {useAuth0} from 'react-native-auth0';
 import {Button, BackButton} from '@/components';
 import {api} from '@/config/api';
-import {useOnboarding} from '@/contexts/OnboardingContext';
+import {useUser} from '@/contexts/UserContext';
 
 const PROVINCES = [
   {code: 'ON', name: 'Ontario'},
@@ -34,7 +34,7 @@ const PROVINCES = [
 export default function OnboardingLocation() {
   const router = useRouter();
   const {getCredentials, user} = useAuth0();
-  const {data, setRegion, reset} = useOnboarding();
+  const {onboardingData, setRegion, completeOnboarding} = useUser();
   const [selected, setSelected] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
@@ -61,13 +61,7 @@ export default function OnboardingLocation() {
     // User is logged in, save data
     setLoading(true);
     try {
-      const creds = await getCredentials();
-
-      // Submit all onboarding data
-      await api.user.submitOnboarding(data, creds.accessToken);
-
-      // Reset context and navigate
-      reset();
+      await completeOnboarding();
       router.replace('/dashboard');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);

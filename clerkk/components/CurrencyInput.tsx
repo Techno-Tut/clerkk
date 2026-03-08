@@ -1,20 +1,23 @@
 import React from 'react';
 import {View, TextInput, Text, StyleSheet, TextInputProps} from 'react-native';
+import {CURRENCY_SYMBOLS} from '@/constants/currency';
 
 interface CurrencyInputProps extends TextInputProps {
-  prefix?: string;
+  currency?: string;
   suffix?: string;
 }
 
 export default function CurrencyInput({
-  prefix,
+  currency = 'CAD',
   suffix,
   style,
   ...props
 }: CurrencyInputProps) {
+  const symbol = CURRENCY_SYMBOLS[currency] || '$';
+
   return (
     <View style={styles.container}>
-      {prefix && <Text style={styles.prefix}>{prefix}</Text>}
+      <Text style={styles.prefix}>{symbol}</Text>
       <TextInput
         style={[styles.input, style]}
         keyboardType="decimal-pad"

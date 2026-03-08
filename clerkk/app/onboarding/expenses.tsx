@@ -9,15 +9,35 @@ import {
 import {useState} from 'react';
 import {useRouter} from 'expo-router';
 import {Button, CurrencyInput, BackButton} from '@/components';
-import {useOnboarding} from '@/contexts/OnboardingContext';
+import {useUser} from '@/contexts/UserContext';
+
+const EXPENSE_CATEGORIES = [
+  {
+    category: 'housing',
+    name: 'Rent / Mortgage',
+    placeholder: '2,000',
+  },
+  {
+    category: 'utilities',
+    name: 'Utilities (hydro, internet, phone)',
+    placeholder: '200',
+  },
+  {
+    category: 'food',
+    name: 'Groceries',
+    placeholder: '600',
+  },
+  {
+    category: 'other',
+    name: 'Miscellaneous (dining, entertainment)',
+    placeholder: '400',
+  },
+];
 
 export default function OnboardingExpenses() {
   const router = useRouter();
-  const {setExpenses} = useOnboarding();
-  const [rent, setRent] = useState('');
-  const [utilities, setUtilities] = useState('');
-  const [groceries, setGroceries] = useState('');
-  const [misc, setMisc] = useState('');
+  const {setExpenses, primaryCurrency} = useUser();
+  const [values, setValues] = useState<Record<string, string>>({});
 
   const formatNumber = (text: string) => {
     const cleaned = text.replace(/[^0-9]/g, '');
@@ -25,33 +45,18 @@ export default function OnboardingExpenses() {
     return cleaned.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
 
+  const handleChange = (category: string, text: string) => {
+    setValues(prev => ({...prev, [category]: formatNumber(text)}));
+  };
+
   const handleContinue = () => {
-    // Save expenses to context
-    const expenses = [];
-    if (rent)
-      expenses.push({
-        category: 'housing',
-        name: 'Rent/Mortgage',
-        amount: parseInt(rent.replace(/,/g, ''), 10),
-      });
-    if (utilities)
-      expenses.push({
-        category: 'utilities',
-        name: 'Utilities',
-        amount: parseInt(utilities.replace(/,/g, ''), 10),
-      });
-    if (groceries)
-      expenses.push({
-        category: 'food',
-        name: 'Groceries',
-        amount: parseInt(groceries.replace(/,/g, ''), 10),
-      });
-    if (misc)
-      expenses.push({
-        category: 'other',
-        name: 'Miscellaneous',
-        amount: parseInt(misc.replace(/,/g, ''), 10),
-      });
+    const expenses = EXPENSE_CATEGORIES.filter(cat => values[cat.category]).map(
+      cat => ({
+        category: cat.category,
+        name: cat.name,
+        amount: parseInt(values[cat.category].replace(/,/g, ''), 10),
+      }),
+    );
 
     setExpenses(expenses);
     router.push('/onboarding/location');
@@ -72,43 +77,23 @@ export default function OnboardingExpenses() {
         <Text style={styles.title}>What are your monthly expenses?</Text>
         <Text style={styles.subtitle}>Add what you have (all optional)</Text>
 
-        <View style={styles.inputGroup}>
-          <CurrencyInput
-            label="Rent / Mortgage"
-            value={rent}
-            onChangeText={text => setRent(formatNumber(text))}
-            placeholder="2,000"
-          />
-        </View>
+        {EXPENSE_CATEGORIES.map(cat => (
+          <View key={cat.category} style={styles.inputGroup}>
+            <Text style={styles.label}>{cat.name}</Text>
+            <CurrencyInput
+              value={values[cat.category] || ''}
+              onChangeText={text => handleChange(cat.category, text)}
+              placeholder={cat.placeholder}
+              currency={primaryCurrency}
+            />
+          </View>
+        ))}
 
-        <View style={styles.inputGroup}>
-          <CurrencyInput
-            label="Utilities (hydro, internet, phone)"
-            value={utilities}
-            onChangeText={text => setUtilities(formatNumber(text))}
-            placeholder="200"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <CurrencyInput
-            label="Groceries"
-            value={groceries}
-            onChangeText={text => setGroceries(formatNumber(text))}
-            placeholder="600"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <CurrencyInput
-            label="Miscellaneous (dining, entertainment)"
-            value={misc}
-            onChangeText={text => setMisc(formatNumber(text))}
-            placeholder="400"
-          />
-        </View>
-
-        <Button title="Continue" onPress={handleContinue} />
+        <Button
+          title="Continue"
+          onPress={handleContinue}
+          style={styles.button}
+        />
 
         <Text style={styles.footer}>Step 2 of 3</Text>
 
@@ -140,7 +125,16 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#000',
+  },
+  button: {
+    marginTop: 16,
   },
   footer: {
     textAlign: 'center',

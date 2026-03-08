@@ -9,14 +9,14 @@ import {
 import {useRouter} from 'expo-router';
 import {Ionicons} from '@expo/vector-icons';
 import {useAuth0} from 'react-native-auth0';
-import {useOnboarding} from '@/contexts/OnboardingContext';
+import {useUser} from '@/contexts/UserContext';
 import {api} from '@/config/api';
 import {useState} from 'react';
 
 export default function SignUp() {
   const router = useRouter();
   const {authorize, getCredentials} = useAuth0();
-  const {data, reset} = useOnboarding();
+  const {onboardingData} = useUser();
   const [loading, setLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -34,7 +34,7 @@ export default function SignUp() {
       const creds = await getCredentials();
 
       // Submit onboarding data
-      await api.user.submitOnboarding(data, creds.accessToken);
+      await api.user.submitOnboarding(onboardingData, creds.accessToken);
 
       // Reset context and navigate
       reset();

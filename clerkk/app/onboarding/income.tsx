@@ -9,11 +9,11 @@ import {useState} from 'react';
 import {useRouter} from 'expo-router';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Button, CurrencyInput} from '@/components';
-import {useOnboarding} from '@/contexts/OnboardingContext';
+import {useUser} from '@/contexts/UserContext';
 
 export default function OnboardingIncome() {
   const router = useRouter();
-  const {setGrossAnnual} = useOnboarding();
+  const {setGrossAnnual, primaryCurrency} = useUser();
   const [grossAnnual, setGrossAnnualLocal] = useState('');
 
   const formatNumber = (text: string) => {
@@ -48,14 +48,15 @@ export default function OnboardingIncome() {
             value={grossAnnual}
             onChangeText={handleChange}
             placeholder="180,000"
+            currency={primaryCurrency}
             autoFocus
-            style={{marginBottom: 24}}
           />
 
           <Button
             title="Continue"
             onPress={handleContinue}
             disabled={!grossAnnual}
+            style={styles.button}
           />
 
           <Text style={styles.footer}>Step 1 of 3</Text>
@@ -88,6 +89,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginBottom: 40,
+  },
+  button: {
+    marginTop: 32,
   },
   footer: {
     textAlign: 'center',

@@ -3,6 +3,7 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  ViewStyle,
 } from 'react-native';
 
 interface ButtonProps {
@@ -11,6 +12,7 @@ interface ButtonProps {
   disabled?: boolean;
   loading?: boolean;
   variant?: 'primary' | 'secondary';
+  style?: ViewStyle;
 }
 
 export default function Button({
@@ -19,6 +21,7 @@ export default function Button({
   disabled,
   loading,
   variant = 'primary',
+  style,
 }: ButtonProps) {
   return (
     <TouchableOpacity
@@ -26,6 +29,7 @@ export default function Button({
         styles.button,
         variant === 'secondary' && styles.secondaryButton,
         disabled && styles.buttonDisabled,
+        style,
       ]}
       onPress={onPress}
       disabled={disabled || loading}

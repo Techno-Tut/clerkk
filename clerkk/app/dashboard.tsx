@@ -16,6 +16,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
 import {useState, useEffect, useCallback, useRef} from 'react';
 import {useAuth0} from 'react-native-auth0';
+import {useUser} from '@/contexts/UserContext';
 import {useRouter, Stack} from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
@@ -49,6 +50,7 @@ const ACCOUNT_CONFIG: Record<
 
 export default function Home() {
   const {user, clearSession, clearCredentials, getCredentials} = useAuth0();
+  const {primaryCurrency} = useUser();
   const router = useRouter();
   const firstName = user?.givenName || user?.name?.split(' ')[0] || 'there';
 
@@ -937,10 +939,9 @@ export default function Home() {
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.modalLabel}>Current Balance</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="$0.00"
-                    keyboardType="numeric"
+                  <CurrencyInput
+                    currency={primaryCurrency}
+                    placeholder="0.00"
                     value={newAccountBalance}
                     onChangeText={setNewAccountBalance}
                   />
@@ -1004,10 +1005,9 @@ export default function Home() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.modalLabel}>New Balance</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="$0.00"
-                keyboardType="numeric"
+              <CurrencyInput
+                currency={primaryCurrency}
+                placeholder="0.00"
                 value={newBalance}
                 onChangeText={setNewBalance}
               />
@@ -1069,10 +1069,9 @@ export default function Home() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.modalLabel}>Amount</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="$0.00"
-                keyboardType="numeric"
+              <CurrencyInput
+                currency={primaryCurrency}
+                placeholder="0.00"
                 value={amount}
                 onChangeText={setAmount}
               />
@@ -1129,10 +1128,9 @@ export default function Home() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.modalLabel}>Amount</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="$0.00"
-                keyboardType="numeric"
+              <CurrencyInput
+                currency={primaryCurrency}
+                placeholder="0.00"
                 value={amount}
                 onChangeText={setAmount}
               />
@@ -1191,7 +1189,7 @@ export default function Home() {
               </View>
               <Text style={styles.modalLabel}>Annual Contribution Limit</Text>
               <CurrencyInput
-                prefix="$"
+                currency={primaryCurrency}
                 placeholder="7000"
                 value={limitAmount}
                 onChangeText={setLimitAmount}
