@@ -76,7 +76,7 @@ jobs:
         run: |
           # Install Poetry
           pip install poetry==1.7.1
-          poetry install --only main
+          poetry install --with dev
 
           # Get DB connection string
           DB_URL=$(aws ssm get-parameter \
