@@ -69,7 +69,7 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      CONFIG_ENV = var.environment
+      ENVIRONMENT = var.environment
     }
   }
 

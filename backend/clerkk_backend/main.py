@@ -14,8 +14,6 @@ from clerkk_backend.controllers import (
     account_router,
 )
 import os
-
-# Import all models so SQLAlchemy can create tables
 import clerkk_backend.models
 
 # Setup logging

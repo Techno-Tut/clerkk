@@ -7,11 +7,11 @@ auth0:
   api_audience: https://api.inbriefs.com
 
 aws:
-  region: ap-south-1
+  region: ca-central-1
 
 cors:
   allowed_origins:
-    - http://localhost:5173
+    - "*"
 
 app:
   environment: development
