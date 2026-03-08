@@ -10,8 +10,8 @@ from clerkk_backend.services.account_service import AccountService
 
 
 def resolve_config_value(parameter_store, config_value):
-    """Resolve config value. If starts with /inbriefs/, fetch from Parameter Store."""
-    if isinstance(config_value, str) and config_value.startswith("/inbriefs/"):
+    """Resolve config value. If starts with /clerkk/, fetch from Parameter Store."""
+    if isinstance(config_value, str) and config_value.startswith("/clerkk/"):
         return parameter_store.get_parameter(config_value)
     return config_value
 

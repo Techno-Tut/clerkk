@@ -69,7 +69,7 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      DB_CONNECTION_STRING_PARAM = aws_ssm_parameter.db_connection_string.name
+      CONFIG_ENV = var.environment
     }
   }
 
