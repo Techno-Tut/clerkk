@@ -36,7 +36,15 @@ resource "aws_iam_user_policy" "github_actions" {
           "lambda:UpdateFunctionCode",
           "lambda:GetFunction"
         ]
-        Resource = "arn:aws:lambda:*:*:function:clerkk-*"
+        Resource = [
+          "arn:aws:lambda:ca-central-1:*:function:clerkk-api",
+          "arn:aws:lambda:ca-central-1:*:function:clerkk-migrations"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = "lambda:InvokeFunction"
+        Resource = "arn:aws:lambda:ca-central-1:*:function:clerkk-migrations"
       },
       {
         Effect = "Allow"

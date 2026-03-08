@@ -63,8 +63,8 @@ resource "aws_lambda_function" "api" {
   memory_size = 512
 
   vpc_config {
-    subnet_ids         = data.aws_subnets.default.ids
-    security_group_ids = [aws_security_group.lambda.id]
+    subnet_ids         = data.aws_subnets.private.ids
+    security_group_ids = [data.aws_security_group.private_db.id]
   }
 
   environment {
@@ -78,31 +78,28 @@ resource "aws_lambda_function" "api" {
   })
 }
 
-# Security group for Lambda
-resource "aws_security_group" "lambda" {
-  name        = "clerkk-lambda-sg"
-  description = "Security group for Clerkk Lambda"
-  vpc_id      = data.aws_vpc.default.id
+# Lambda for running migrations
+resource "aws_lambda_function" "migrations" {
+  function_name = "clerkk-migrations"
+  role          = aws_iam_role.lambda.arn
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.db_migrations.repository_url}:latest"
+  timeout       = 300
+  memory_size   = 512
+  architectures = ["arm64"]
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  vpc_config {
+    subnet_ids         = data.aws_subnets.private.ids
+    security_group_ids = [data.aws_security_group.private_db.id]
+  }
+
+  environment {
+    variables = {
+      ENVIRONMENT = var.environment
+    }
   }
 
   tags = merge(local.common_tags, {
-    Name = "clerkk-lambda-sg"
+    Name = "clerkk-migrations"
   })
-}
-
-# Allow Lambda to access RDS
-resource "aws_security_group_rule" "rds_from_lambda" {
-  type                     = "ingress"
-  from_port                = 5432
-  to_port                  = 5432
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.lambda.id
-  security_group_id        = aws_security_group.rds.id
-  description              = "PostgreSQL from Lambda"
 }

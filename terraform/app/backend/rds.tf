@@ -1,13 +1,42 @@
-# Get default VPC
-data "aws_vpc" "default" {
-  default = true
+# Get VPC from remote state
+data "terraform_remote_state" "account" {
+  backend = "s3"
+  config = {
+    bucket = "clerkk-terraform-state-ap-south-1"
+    key    = "account/terraform.tfstate"
+    region = "ca-central-1"
+  }
 }
 
-# Get default subnets
-data "aws_subnets" "default" {
+# Get VPC by name
+data "aws_vpc" "main" {
+  filter {
+    name   = "tag:Name"
+    values = ["clerkk-vpc"]
+  }
+}
+
+# Get private subnets
+data "aws_subnets" "private" {
   filter {
     name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
+    values = [data.aws_vpc.main.id]
+  }
+  filter {
+    name   = "tag:Type"
+    values = ["private"]
+  }
+}
+
+# Get private DB security group
+data "aws_security_group" "private_db" {
+  filter {
+    name   = "tag:Name"
+    values = ["clerkk-private-db-sg"]
+  }
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.main.id]
   }
 }
 
@@ -26,10 +55,10 @@ resource "aws_db_instance" "clerkk" {
   username = "clerkk_admin"
   password = random_password.db_password.result
 
-  vpc_security_group_ids = [aws_security_group.rds.id]
+  vpc_security_group_ids = [data.aws_security_group.private_db.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
-  publicly_accessible = true
+  publicly_accessible = false
   multi_az            = false
 
   backup_retention_period = 0
@@ -40,29 +69,10 @@ resource "aws_db_instance" "clerkk" {
   })
 }
 
-# Security group for RDS
-resource "aws_security_group" "rds" {
-  name        = "clerkk-rds-sg"
-  description = "Allow PostgreSQL access"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "PostgreSQL from anywhere (secured by password)"
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "clerkk-rds-sg"
-  })
-}
-
-# Subnet group using default subnets
+# Subnet group using private subnets
 resource "aws_db_subnet_group" "main" {
   name       = "clerkk-db-subnet-group"
-  subnet_ids = data.aws_subnets.default.ids
+  subnet_ids = data.aws_subnets.private.ids
 
   tags = merge(local.common_tags, {
     Name = "clerkk-db-subnet-group"

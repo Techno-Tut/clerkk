@@ -71,24 +71,36 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Run database migrations
+      - name: Build and push migration image
         working-directory: backend
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          # Install Poetry
-          pip install poetry==1.7.1
-          poetry install --with dev
+          docker buildx build --platform linux/arm64 \
+            --provenance=false --sbom=false \
+            --push \
+            -f alembic/Dockerfile \
+            -t $ECR_REGISTRY/clerkk-db-migrations:latest \
+            .
 
-          # Get DB connection string
-          DB_URL=$(aws ssm get-parameter \
-            --name /clerkk/db/connection_string \
-            --with-decryption \
+      - name: Run database migrations
+        run: |
+          aws lambda update-function-code \
+            --function-name clerkk-migrations \
+            --image-uri ${{ steps.login-ecr.outputs.registry }}/clerkk-db-migrations:latest \
+            --region ${{ env.AWS_REGION }}
+
+          aws lambda wait function-updated \
+            --function-name clerkk-migrations \
+            --region ${{ env.AWS_REGION }}
+
+          aws lambda invoke \
+            --function-name clerkk-migrations \
             --region ${{ env.AWS_REGION }} \
-            --query 'Parameter.Value' \
-            --output text)
-
-          # Run migrations
-          export DATABASE_URL="$DB_URL"
-          poetry run alembic upgrade head
+            --log-type Tail \
+            --query 'LogResult' \
+            --output text \
+            response.json | base64 --decode
 
       - name: Update Lambda function
         env:

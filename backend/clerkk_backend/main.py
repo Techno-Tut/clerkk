@@ -15,6 +15,7 @@ from clerkk_backend.controllers import (
 )
 import os
 import clerkk_backend.models
+from mangum import Mangum
 
 # Setup logging
 setup_logging()
@@ -69,13 +70,6 @@ environment = os.getenv("ENVIRONMENT", "dev")
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 config_file = os.path.join(project_root, "config", f"{environment}.yaml")
 container.config.from_yaml(config_file, required=True, envs_required=True)
-
-# Create database tables
-from clerkk_backend.models import Base
-
-# Base.metadata.drop_all(container.database().engine)  # MVP: Drop old schema
-# Base.metadata.create_all(container.database().engine)
-
 # Add CORS middleware (after config is loaded)
 app.add_middleware(
     CORSMiddleware,
@@ -137,8 +131,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# Lambda handler (for AWS Lambda with Mangum)
-from mangum import Mangum
 
 handler = Mangum(app)

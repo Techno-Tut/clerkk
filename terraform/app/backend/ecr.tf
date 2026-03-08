@@ -11,6 +11,19 @@ resource "aws_ecr_repository" "backend" {
   })
 }
 
+resource "aws_ecr_repository" "db_migrations" {
+  name                 = "clerkk-db-migrations"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "clerkk-db-migrations-ecr"
+  })
+}
+
 resource "aws_ecr_lifecycle_policy" "backend" {
   repository = aws_ecr_repository.backend.name
 
