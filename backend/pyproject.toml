@@ -20,6 +20,7 @@ dependency-injector = "^4.48.3"
 boto3 = "^1.42.59"
 mangum = "^0.21.0"
 pyjwt = "^2.11.0"
+requests = "^2.32.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"

@@ -1,6 +1,6 @@
 # Development Configuration
 database:
-  url: postgresql://postgres:postgres@db:5432/inbriefs
+  url: postgresql://postgres:postgres@db:5432/clerkk
 
 auth0:
   domain: technotut.au.auth0.com
@@ -8,11 +8,6 @@ auth0:
 
 aws:
   region: ap-south-1
-
-s3:
-  bucket_name: inbriefs-articles-prod
-  region: ap-south-1
-  prefix: test/
 
 cors:
   allowed_origins:

@@ -4,7 +4,7 @@ FROM public.ecr.aws/lambda/python:3.12 AS builder
 WORKDIR /build
 
 # Install Poetry
-RUN pip install poetry
+RUN pip install poetry==1.7.1
 
 # Copy Poetry files
 COPY pyproject.toml poetry.lock ./
@@ -18,7 +18,7 @@ RUN pip install --target /build/python -r requirements.txt
 # Stage 2: Runtime
 FROM public.ecr.aws/lambda/python:3.12
 
-# Copy only installed packages from builder
+# Copy installed packages from builder
 COPY --from=builder /build/python ${LAMBDA_RUNTIME_DIR}/
 
 # Copy application code

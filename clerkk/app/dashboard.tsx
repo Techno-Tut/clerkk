@@ -16,7 +16,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
 import {useState, useEffect, useCallback, useRef} from 'react';
 import {useAuth0} from 'react-native-auth0';
-import {useRouter, Stack, useFocusEffect} from 'expo-router';
+import {useRouter, Stack} from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import {
   KeyboardAwareScrollView,
@@ -89,13 +89,6 @@ export default function Home() {
     fetchStats();
     fetchAccounts();
   }, [viewMode]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchStats();
-      fetchAccounts();
-    }, [viewMode]),
-  );
 
   const fetchStats = async () => {
     try {
@@ -1049,61 +1042,66 @@ export default function Home() {
 
       <Modal visible={showContributeModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <TouchableOpacity
+          <KeyboardAwareScrollView
             style={{flex: 1}}
-            activeOpacity={1}
-            onPress={() => setShowContributeModal(false)}
-          />
-          <View
-            style={[
-              styles.modalContent,
-              {paddingBottom: 40 + (Platform.OS === 'ios' ? 0 : 0)},
-            ]}
+            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
           >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Contribute to{' '}
-                <Text style={styles.modalTitleHighlight}>
-                  {selectedAccount}
+            <TouchableOpacity
+              style={{flex: 1}}
+              activeOpacity={1}
+              onPress={() => setShowContributeModal(false)}
+            />
+            <View
+              style={[
+                styles.modalContent,
+                {paddingBottom: 40 + (Platform.OS === 'ios' ? 0 : 0)},
+              ]}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  Contribute to{' '}
+                  <Text style={styles.modalTitleHighlight}>
+                    {selectedAccount}
+                  </Text>
                 </Text>
-              </Text>
-              <TouchableOpacity onPress={() => setShowContributeModal(false)}>
-                <Ionicons name="close" size={24} color="#000" />
+                <TouchableOpacity onPress={() => setShowContributeModal(false)}>
+                  <Ionicons name="close" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.modalLabel}>Amount</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="$0.00"
+                keyboardType="numeric"
+                value={amount}
+                onChangeText={setAmount}
+              />
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={async () => {
+                  try {
+                    const creds = await getCredentials();
+                    await api.accounts.addEvent(
+                      selectedAccountId,
+                      {
+                        event_type: 'contribute',
+                        amount: parseFloat(amount),
+                      },
+                      creds.accessToken,
+                    );
+                    setAmount('');
+                    setShowContributeModal(false);
+                    fetchAccounts();
+                  } catch (error) {
+                    console.error('Failed to contribute:', error);
+                    Alert.alert('Error', 'Failed to add contribution');
+                  }
+                }}
+              >
+                <Text style={styles.modalButtonText}>Contribute</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalLabel}>Amount</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="$0.00"
-              keyboardType="numeric"
-              value={amount}
-              onChangeText={setAmount}
-            />
-            <TouchableOpacity
-              style={styles.modalButton}
-              onPress={async () => {
-                try {
-                  const creds = await getCredentials();
-                  await api.accounts.addEvent(
-                    selectedAccountId,
-                    {
-                      event_type: 'contribute',
-                      amount: parseFloat(amount),
-                    },
-                    creds.accessToken,
-                  );
-                  setAmount('');
-                  setShowContributeModal(false);
-                  fetchAccounts();
-                } catch (error) {
-                  console.error('Failed to contribute:', error);
-                  Alert.alert('Error', 'Failed to add contribution');
-                }
-              }}
-            >
-              <Text style={styles.modalButtonText}>Contribute</Text>
-            </TouchableOpacity>
-          </View>
+          </KeyboardAwareScrollView>
         </View>
       </Modal>
 

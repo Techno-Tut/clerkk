@@ -1,0 +1,104 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ca-central-1
+  ECR_REPOSITORY: clerkk-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to push tags
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          cd backend
+          # Get latest tag or default to v1.0.0
+          git fetch --tags
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="v$MAJOR.$MINOR.$NEW_PATCH"
+
+          docker buildx build --platform linux/arm64 \
+            --provenance=false --sbom=false \
+            --push \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$NEW_VERSION \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
+
+          # Create git tag
+          git tag $NEW_VERSION
+          git push origin $NEW_VERSION
+
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Run database migrations
+        working-directory: backend
+        run: |
+          # Install Poetry
+          pip install poetry==1.7.1
+          poetry install --only main
+
+          # Get DB connection string
+          DB_URL=$(aws ssm get-parameter \
+            --name /clerkk/db/connection_string \
+            --with-decryption \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Parameter.Value' \
+            --output text)
+
+          # Run migrations
+          export DATABASE_URL="$DB_URL"
+          poetry run alembic upgrade head
+
+      - name: Update Lambda function
+        env:
+          IMAGE_URI: ${{ steps.build-image.outputs.image }}
+        run: |
+          # Update API Lambda
+          aws lambda update-function-code \
+            --function-name clerkk-api \
+            --image-uri $IMAGE_URI \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Deployment complete
+        run: echo "✅ Deployed backend to Lambda with image ${{ steps.build-image.outputs.image }}"
