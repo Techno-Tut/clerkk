@@ -21,15 +21,18 @@ const API_URL_KEY = '@clerkk_api_url';
 
 // Get API URL from storage or use default
 const getApiUrl = async () => {
+  // In production, always use production URL
+  if (!__DEV__) {
+    return 'https://qx1w3bvhpd.execute-api.ca-central-1.amazonaws.com';
+  }
+
+  // In development, allow override via settings
   try {
     const url = await AsyncStorage.getItem(API_URL_KEY);
     if (url) return url;
   } catch {}
 
-  // Default URLs
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000';
-  }
+  // Default development URL
   return 'http://localhost:8000';
 };
 

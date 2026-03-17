@@ -16,8 +16,8 @@ export default function Index() {
     );
   }
 
-  // If user exists, wait for profile to load
-  if (user && profileLoading) {
+  // If user exists, wait for profile to be ready
+  if (user && (profileLoading || !profile)) {
     return (
       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
         <ActivityIndicator size="large" color="#000" />

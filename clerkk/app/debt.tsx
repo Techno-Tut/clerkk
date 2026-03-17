@@ -16,9 +16,11 @@ import {Ionicons} from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth0} from 'react-native-auth0';
+import {BlurView} from 'expo-blur';
 import {Currency} from '../components';
 import {api} from '../config/api';
 import CurrencyInput from '../components/CurrencyInput';
+import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 
 const MULTI_CURRENCY_KEY = '@clerkk_multi_currency';
 const CONVERT_DEBT_KEY = '@clerkk_convert_debt_to_local';
@@ -172,105 +174,204 @@ export default function DebtScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+      <BlurView intensity={80} tint="light" style={styles.blurHeader}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.floatingBack}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             router.back();
           }}
         >
-          <Ionicons name="chevron-back" size={28} color="#000" />
+          <Ionicons name="chevron-back" size={22} color="#000" />
         </TouchableOpacity>
-      </View>
+      </BlurView>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{paddingTop: 98}}
+      >
         {/* Summary Card */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Total Monthly Payment</Text>
-          <Currency amount={totalMonthlyPayment} style={styles.summaryAmount} />
-          <Text style={styles.summarySubtext}>
-            {debts.length} {debts.length === 1 ? 'debt' : 'debts'}
-          </Text>
-        </View>
-
-        {/* Empty State */}
-        {debts.length === 0 && !isLoading && (
-          <View style={styles.emptyState}>
-            <Ionicons name="wallet-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyTitle}>No debt tracked</Text>
-            <Text style={styles.emptyText}>
-              Add your debts to see how they impact your surplus and get
-              AI-powered payoff strategies
+        {isLoading ? (
+          <View style={styles.summaryCard}>
+            <SkeletonPlaceholder
+              backgroundColor="#1a1a1a"
+              highlightColor="#2a2a2a"
+            >
+              <SkeletonPlaceholder.Item alignItems="center" gap={8}>
+                <SkeletonPlaceholder.Item
+                  width={160}
+                  height={14}
+                  borderRadius={4}
+                />
+                <SkeletonPlaceholder.Item
+                  width={120}
+                  height={36}
+                  borderRadius={4}
+                />
+                <SkeletonPlaceholder.Item
+                  width={60}
+                  height={14}
+                  borderRadius={4}
+                />
+              </SkeletonPlaceholder.Item>
+            </SkeletonPlaceholder>
+          </View>
+        ) : (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>Total Monthly Payment</Text>
+            <Currency
+              amount={totalMonthlyPayment}
+              style={styles.summaryAmount}
+            />
+            <Text style={styles.summarySubtext}>
+              {debts.length} {debts.length === 1 ? 'debt' : 'debts'}
             </Text>
           </View>
         )}
 
-        {/* Debt List */}
-        {debts.map(debt => (
-          <View key={debt.id} style={styles.debtCard}>
-            <View style={styles.debtHeader}>
-              <View style={styles.debtLeft}>
-                <Ionicons
-                  name={
-                    (DEBT_TYPES.find(t => t.value === debt.type)?.icon ||
-                      'wallet-outline') as any
-                  }
-                  size={24}
-                  color="#666"
-                  style={styles.debtIcon}
-                />
-                <View>
-                  <Text style={styles.debtName}>{debt.name}</Text>
-                  <Text style={styles.debtType}>
-                    {DEBT_TYPES.find(t => t.value === debt.type)?.label} •{' '}
-                    {debt.currency}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.debtRight}>
-                <Currency
-                  amount={debt.current_balance}
-                  currency={debt.currency as 'CAD' | 'USD' | 'INR' | 'EUR'}
-                  style={styles.debtBalance}
-                />
-                <Text style={styles.debtRate}>{debt.interest_rate}% APR</Text>
-              </View>
-            </View>
-            <View style={styles.debtFooter}>
-              <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
-                <Currency
-                  amount={debt.monthly_payment}
-                  currency={debt.currency as 'CAD' | 'USD' | 'INR' | 'EUR'}
-                  style={styles.debtPayment}
-                />
-                <Text style={styles.debtPayment}> / month</Text>
-              </View>
-            </View>
-
-            {/* Add Details Prompt */}
-            {hasIncompleteData(debt) && (
-              <TouchableOpacity
-                style={styles.addDetailsButton}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setEditingDebt(debt);
-                  setOriginalPrincipal(debt.original_principal || '');
-                  setTermMonths(debt.term_months?.toString() || '');
-                  setStartDate(debt.start_date || '');
-                  setShowAdditionalFields(true);
-                  setShowEditModal(true);
-                }}
+        {isLoading ? (
+          [0, 1].map(i => (
+            <View key={i} style={styles.debtCard}>
+              <SkeletonPlaceholder
+                backgroundColor="#e8e8e8"
+                highlightColor="#f5f5f5"
               >
-                <Ionicons name="add-circle-outline" size={16} color="#4CAF50" />
-                <Text style={styles.addDetailsText}>
-                  Complete for better insights
+                <SkeletonPlaceholder.Item
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <SkeletonPlaceholder.Item
+                    flexDirection="row"
+                    alignItems="center"
+                    gap={12}
+                  >
+                    <SkeletonPlaceholder.Item
+                      width={24}
+                      height={24}
+                      borderRadius={12}
+                    />
+                    <SkeletonPlaceholder.Item gap={6}>
+                      <SkeletonPlaceholder.Item
+                        width={100}
+                        height={16}
+                        borderRadius={4}
+                      />
+                      <SkeletonPlaceholder.Item
+                        width={80}
+                        height={12}
+                        borderRadius={4}
+                      />
+                    </SkeletonPlaceholder.Item>
+                  </SkeletonPlaceholder.Item>
+                  <SkeletonPlaceholder.Item alignItems="flex-end" gap={6}>
+                    <SkeletonPlaceholder.Item
+                      width={80}
+                      height={16}
+                      borderRadius={4}
+                    />
+                    <SkeletonPlaceholder.Item
+                      width={60}
+                      height={12}
+                      borderRadius={4}
+                    />
+                  </SkeletonPlaceholder.Item>
+                </SkeletonPlaceholder.Item>
+                <SkeletonPlaceholder.Item
+                  width={100}
+                  height={14}
+                  borderRadius={4}
+                  marginTop={16}
+                />
+              </SkeletonPlaceholder>
+            </View>
+          ))
+        ) : (
+          <>
+            {/* Empty State */}
+            {debts.length === 0 && (
+              <View style={styles.emptyState}>
+                <Ionicons name="wallet-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyTitle}>No debt tracked</Text>
+                <Text style={styles.emptyText}>
+                  Add your debts to see how they impact your surplus and get
+                  AI-powered payoff strategies
                 </Text>
-              </TouchableOpacity>
+              </View>
             )}
-          </View>
-        ))}
+
+            {/* Debt List */}
+            {debts.map(debt => (
+              <View key={debt.id} style={styles.debtCard}>
+                <View style={styles.debtHeader}>
+                  <View style={styles.debtLeft}>
+                    <Ionicons
+                      name={
+                        (DEBT_TYPES.find(t => t.value === debt.type)?.icon ||
+                          'wallet-outline') as any
+                      }
+                      size={24}
+                      color="#666"
+                      style={styles.debtIcon}
+                    />
+                    <View>
+                      <Text style={styles.debtName}>{debt.name}</Text>
+                      <Text style={styles.debtType}>
+                        {DEBT_TYPES.find(t => t.value === debt.type)?.label} •{' '}
+                        {debt.currency}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.debtRight}>
+                    <Currency
+                      amount={debt.current_balance}
+                      currency={debt.currency as 'CAD' | 'USD' | 'INR' | 'EUR'}
+                      style={styles.debtBalance}
+                    />
+                    <Text style={styles.debtRate}>
+                      {debt.interest_rate}% APR
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.debtFooter}>
+                  <View style={{flexDirection: 'row', alignItems: 'baseline'}}>
+                    <Currency
+                      amount={debt.monthly_payment}
+                      currency={debt.currency as 'CAD' | 'USD' | 'INR' | 'EUR'}
+                      style={styles.debtPayment}
+                    />
+                    <Text style={styles.debtPayment}> / month</Text>
+                  </View>
+                </View>
+
+                {/* Add Details Prompt */}
+                {hasIncompleteData(debt) && (
+                  <TouchableOpacity
+                    style={styles.addDetailsButton}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setEditingDebt(debt);
+                      setOriginalPrincipal(debt.original_principal || '');
+                      setTermMonths(debt.term_months?.toString() || '');
+                      setStartDate(debt.start_date || '');
+                      setShowAdditionalFields(true);
+                      setShowEditModal(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="add-circle-outline"
+                      size={16}
+                      color="#4CAF50"
+                    />
+                    <Text style={styles.addDetailsText}>
+                      Complete for better insights
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
 
       {/* Add Button */}
@@ -575,16 +676,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    paddingTop: 60,
+  blurHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingTop: 54,
+    paddingBottom: 10,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
   },
-  backButton: {
+  floatingBack: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,

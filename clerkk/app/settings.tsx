@@ -147,6 +147,9 @@ export default function Settings() {
 
       <View style={styles.content}>
         {SETTINGS_CONFIG.map((section, sectionIndex) => {
+          // Hide Developer section in production
+          if (!__DEV__ && section.title === 'DEVELOPER') return null;
+
           const shouldShowSection = section.items.some(item => {
             if (!item.showWhen) return true;
             return settings[item.showWhen];

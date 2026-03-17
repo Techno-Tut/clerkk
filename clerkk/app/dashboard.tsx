@@ -26,8 +26,12 @@ import {
 import {Swipeable, GestureHandlerRootView} from 'react-native-gesture-handler';
 import {api} from '../config/api';
 import CurrencyInput from '../components/CurrencyInput';
+import AccountActionModal, {
+  ACCOUNT_ACTIONS,
+} from '../components/AccountActionModal';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import Currency from '../components/Currency';
+import {useToast} from '../contexts/ToastContext';
 
 const ACCOUNT_CONFIG: Record<
   string,
@@ -51,6 +55,7 @@ const ACCOUNT_CONFIG: Record<
 export default function Home() {
   const {user, clearSession, clearCredentials, getCredentials} = useAuth0();
   const {primaryCurrency} = useUser();
+  const {showToast} = useToast();
   const router = useRouter();
   const firstName = user?.givenName || user?.name?.split(' ')[0] || 'there';
 
@@ -58,14 +63,14 @@ export default function Home() {
   const [stats, setStats] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showContributeModal, setShowContributeModal] = useState(false);
-  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
-  const [showUpdateBalanceModal, setShowUpdateBalanceModal] = useState(false);
+  const [accountAction, setAccountAction] = useState<
+    'contribute' | 'withdraw' | 'update_balance'
+  >(ACCOUNT_ACTIONS.CONTRIBUTE);
+  const [showAccountAction, setShowAccountAction] = useState(false);
   const [showLogPaycheckModal, setShowLogPaycheckModal] = useState(false);
   const [showAccountsInfo, setShowAccountsInfo] = useState(false);
   const [showQuickActionsInfo, setShowQuickActionsInfo] = useState(false);
-  const [amount, setAmount] = useState('');
   const [selectedAccount, setSelectedAccount] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [newAccountName, setNewAccountName] = useState('');
@@ -74,7 +79,6 @@ export default function Home() {
   >('cash');
   const [newAccountBalance, setNewAccountBalance] = useState('');
   const [showAccountForm, setShowAccountForm] = useState(false);
-  const [newBalance, setNewBalance] = useState('');
   const swipeableRefs = useRef<{[key: string]: Swipeable | null}>({});
   const [paycheckAmount, setPaycheckAmount] = useState('');
   const [paycheckDate, setPaycheckDate] = useState('Today');
@@ -536,7 +540,8 @@ export default function Home() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setSelectedAccount(account.name);
                         setSelectedAccountId(account.id);
-                        setShowContributeModal(true);
+                        setAccountAction(ACCOUNT_ACTIONS.CONTRIBUTE);
+                        setShowAccountAction(true);
                       }}
                     >
                       <Ionicons
@@ -552,7 +557,8 @@ export default function Home() {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setSelectedAccount(account.name);
                         setSelectedAccountId(account.id);
-                        setShowWithdrawModal(true);
+                        setAccountAction(ACCOUNT_ACTIONS.WITHDRAW);
+                        setShowAccountAction(true);
                       }}
                     >
                       <Ionicons
@@ -569,7 +575,8 @@ export default function Home() {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSelectedAccount(account.name);
                       setSelectedAccountId(account.id);
-                      setShowUpdateBalanceModal(true);
+                      setAccountAction(ACCOUNT_ACTIONS.UPDATE_BALANCE);
+                      setShowAccountAction(true);
                     }}
                   >
                     <Text style={styles.rebalanceButtonText}>
@@ -979,189 +986,21 @@ export default function Home() {
         </View>
       </Modal>
 
-      <Modal visible={showUpdateBalanceModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <KeyboardAwareScrollView
-            style={{flex: 1}}
-            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
-          >
-            <TouchableOpacity
-              style={{flex: 1}}
-              activeOpacity={1}
-              onPress={() => setShowUpdateBalanceModal(false)}
-            />
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  Update Balance for{' '}
-                  <Text style={styles.modalTitleHighlight}>
-                    {selectedAccount}
-                  </Text>
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setShowUpdateBalanceModal(false)}
-                >
-                  <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>New Balance</Text>
-              <CurrencyInput
-                currency={primaryCurrency}
-                placeholder="0.00"
-                value={newBalance}
-                onChangeText={setNewBalance}
-              />
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={async () => {
-                  try {
-                    const creds = await getCredentials();
-                    await api.accounts.addEvent(
-                      selectedAccountId,
-                      {
-                        event_type: 'update_balance',
-                        balance_snapshot: parseFloat(newBalance),
-                      },
-                      creds.accessToken,
-                    );
-                    setNewBalance('');
-                    setShowUpdateBalanceModal(false);
-                    fetchAccounts();
-                  } catch (error) {
-                    console.error('Failed to update balance:', error);
-                    Alert.alert('Error', 'Failed to update balance');
-                  }
-                }}
-              >
-                <Text style={styles.modalButtonText}>Update Balance</Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAwareScrollView>
-        </View>
-      </Modal>
-
-      <Modal visible={showContributeModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <KeyboardAwareScrollView
-            style={{flex: 1}}
-            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
-          >
-            <TouchableOpacity
-              style={{flex: 1}}
-              activeOpacity={1}
-              onPress={() => setShowContributeModal(false)}
-            />
-            <View
-              style={[
-                styles.modalContent,
-                {paddingBottom: 40 + (Platform.OS === 'ios' ? 0 : 0)},
-              ]}
-            >
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  Contribute to{' '}
-                  <Text style={styles.modalTitleHighlight}>
-                    {selectedAccount}
-                  </Text>
-                </Text>
-                <TouchableOpacity onPress={() => setShowContributeModal(false)}>
-                  <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Amount</Text>
-              <CurrencyInput
-                currency={primaryCurrency}
-                placeholder="0.00"
-                value={amount}
-                onChangeText={setAmount}
-              />
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={async () => {
-                  try {
-                    const creds = await getCredentials();
-                    await api.accounts.addEvent(
-                      selectedAccountId,
-                      {
-                        event_type: 'contribute',
-                        amount: parseFloat(amount),
-                      },
-                      creds.accessToken,
-                    );
-                    setAmount('');
-                    setShowContributeModal(false);
-                    fetchAccounts();
-                  } catch (error) {
-                    console.error('Failed to contribute:', error);
-                    Alert.alert('Error', 'Failed to add contribution');
-                  }
-                }}
-              >
-                <Text style={styles.modalButtonText}>Contribute</Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAwareScrollView>
-        </View>
-      </Modal>
-
-      <Modal visible={showWithdrawModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <KeyboardAwareScrollView
-            style={{flex: 1}}
-            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
-          >
-            <TouchableOpacity
-              style={{flex: 1}}
-              activeOpacity={1}
-              onPress={() => setShowWithdrawModal(false)}
-            />
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  Withdraw from{' '}
-                  <Text style={styles.modalTitleHighlight}>
-                    {selectedAccount}
-                  </Text>
-                </Text>
-                <TouchableOpacity onPress={() => setShowWithdrawModal(false)}>
-                  <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Amount</Text>
-              <CurrencyInput
-                currency={primaryCurrency}
-                placeholder="0.00"
-                value={amount}
-                onChangeText={setAmount}
-              />
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonDanger]}
-                onPress={async () => {
-                  try {
-                    const creds = await getCredentials();
-                    await api.accounts.addEvent(
-                      selectedAccountId,
-                      {
-                        event_type: 'withdraw',
-                        amount: parseFloat(amount),
-                      },
-                      creds.accessToken,
-                    );
-                    setAmount('');
-                    setShowWithdrawModal(false);
-                    fetchAccounts();
-                  } catch (error) {
-                    console.error('Failed to withdraw:', error);
-                    Alert.alert('Error', 'Failed to withdraw');
-                  }
-                }}
-              >
-                <Text style={styles.modalButtonText}>Withdraw</Text>
-              </TouchableOpacity>
-            </View>
-          </KeyboardAwareScrollView>
-        </View>
-      </Modal>
+      <AccountActionModal
+        visible={showAccountAction}
+        type={accountAction}
+        accountName={selectedAccount}
+        accountId={selectedAccountId}
+        currency={primaryCurrency}
+        onClose={() => setShowAccountAction(false)}
+        onSubmit={async (id, payload) => {
+          const creds = await getCredentials();
+          await api.accounts.addEvent(id, payload, creds.accessToken);
+          fetchAccounts();
+        }}
+        onSuccess={msg => showToast(msg)}
+        onError={msg => showToast(msg, 'error')}
+      />
 
       <Modal visible={showSetLimitModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
