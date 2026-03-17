@@ -120,13 +120,15 @@ class DebtService:
                 .filter(UserDebt.user_id == user_id, UserDebt.is_active == True)
                 .all()
             )
-
-            total_cad = Decimal("0")
             for debt in debts:
-                rate = self.currency_service.get_rate(debt.currency, Currency.CAD)
-                total_cad += debt.monthly_payment * rate
+                session.expunge(debt)
 
-            return total_cad
+        total_cad = Decimal("0")
+        for debt in debts:
+            rate = self.currency_service.get_rate(debt.currency, Currency.CAD)
+            total_cad += debt.monthly_payment * rate
+
+        return total_cad
 
     def _to_response(self, debt: UserDebt) -> DebtResponse:
         """Convert model to response schema"""
