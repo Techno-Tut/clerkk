@@ -28,7 +28,7 @@ class UserDebt(Base):
     type = Column(
         String(20), nullable=False
     )  # 'mortgage', 'loan', 'credit_card', 'line_of_credit'
-    currency = Column(String(3), nullable=False, default="CAD")  # ISO 4217
+    currency = Column(String(3), nullable=False)  # ISO 4217
     monthly_payment = Column(Numeric(10, 2), nullable=False)
     current_balance = Column(Numeric(12, 2), nullable=False)
     interest_rate = Column(Numeric(5, 2), nullable=False)

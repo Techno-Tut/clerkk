@@ -3,6 +3,7 @@ from decimal import Decimal
 from datetime import date
 from typing import Optional
 from enum import Enum
+from clerkk_backend.core.enums import Currency
 
 
 class DebtType(str, Enum):
@@ -25,7 +26,7 @@ class DebtCreate(BaseModel):
     )
 
     # Optional - for amortization insights
-    currency: str = Field(default="CAD", max_length=3)
+    currency: Currency = Currency.CAD
     original_principal: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
     term_months: Optional[int] = Field(None, gt=0)
     start_date: Optional[date] = None

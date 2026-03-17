@@ -4,12 +4,13 @@ from decimal import Decimal
 from clerkk_backend.core.database import Database
 from clerkk_backend.models.debt import UserDebt
 from clerkk_backend.schemas.debt import DebtCreate, DebtUpdate, DebtResponse
-from clerkk_backend.utils.currency_converter import convert_to_cad
+from clerkk_backend.core.enums import Currency
 
 
 class DebtService:
-    def __init__(self, database: Database):
+    def __init__(self, database: Database, currency_service=None):
         self.database = database
+        self.currency_service = currency_service
 
     def create_debt(self, user_id: str, debt_data: DebtCreate) -> DebtResponse:
         """Create a new debt for user"""
@@ -84,6 +85,8 @@ class DebtService:
             )
 
             if display_currency:
+                for debt in debts:
+                    session.expunge(debt)
                 converted_debts = [
                     self._convert_debt_currency(debt, display_currency)
                     for debt in debts
@@ -97,41 +100,16 @@ class DebtService:
         if debt.currency == target_currency:
             return debt
 
-        # Convert to CAD first
-        monthly_payment_cad = convert_to_cad(debt.monthly_payment, debt.currency)
-        current_balance_cad = convert_to_cad(debt.current_balance, debt.currency)
-        original_principal_cad = (
-            convert_to_cad(debt.original_principal, debt.currency)
+        rate = self.currency_service.get_rate(debt.currency, target_currency)
+
+        debt.monthly_payment = round(debt.monthly_payment * rate, 2)
+        debt.current_balance = round(debt.current_balance * rate, 2)
+        debt.original_principal = (
+            round(debt.original_principal * rate, 2)
             if debt.original_principal
             else None
         )
-
-        # If target is CAD, we're done
-        if target_currency == "CAD":
-            debt.currency = "CAD"
-            debt.monthly_payment = round(monthly_payment_cad, 2)
-            debt.current_balance = round(current_balance_cad, 2)
-            debt.original_principal = (
-                round(original_principal_cad, 2) if original_principal_cad else None
-            )
-            return debt
-
-        # Convert from CAD to target currency
-        from clerkk_backend.utils.currency_converter import get_current_rates
-
-        rates = get_current_rates()
-
-        if target_currency not in rates:
-            return debt  # Return original if target currency not supported
-
-        rate = Decimal(str(rates[target_currency]))
         debt.currency = target_currency
-        debt.monthly_payment = round(monthly_payment_cad * rate, 2)
-        debt.current_balance = round(current_balance_cad * rate, 2)
-        debt.original_principal = (
-            round(original_principal_cad * rate, 2) if original_principal_cad else None
-        )
-
         return debt
 
     def get_total_monthly_debt_payment(self, user_id: str) -> Decimal:
@@ -145,8 +123,8 @@ class DebtService:
 
             total_cad = Decimal("0")
             for debt in debts:
-                payment_in_cad = convert_to_cad(debt.monthly_payment, debt.currency)
-                total_cad += payment_in_cad
+                rate = self.currency_service.get_rate(debt.currency, Currency.CAD)
+                total_cad += debt.monthly_payment * rate
 
             return total_cad
 

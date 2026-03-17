@@ -8,6 +8,7 @@ from clerkk_backend.models.expense import Expense
 from clerkk_backend.models.expense_history import ExpenseHistory
 from clerkk_backend.models.debt import UserDebt
 from clerkk_backend.models.account import UserAccount, AccountLedger
+from clerkk_backend.models.exchange_rate import ExchangeRateCache
 
 __all__ = [
     "Base",
@@ -20,4 +21,5 @@ __all__ = [
     "UserDebt",
     "UserAccount",
     "AccountLedger",
+    "ExchangeRateCache",
 ]
