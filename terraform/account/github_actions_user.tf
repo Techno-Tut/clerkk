@@ -34,7 +34,8 @@ resource "aws_iam_user_policy" "github_actions" {
         Effect = "Allow"
         Action = [
           "lambda:UpdateFunctionCode",
-          "lambda:GetFunction"
+          "lambda:GetFunction",
+          "lambda:GetFunctionConfiguration"
         ]
         Resource = [
           "arn:aws:lambda:ca-central-1:*:function:clerkk-api",
