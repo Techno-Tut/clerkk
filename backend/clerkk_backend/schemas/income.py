@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date
 from decimal import Decimal
+from clerkk_backend.core.enums import IncomeEventType
 
 
 class UserIncomeCreate(BaseModel):
@@ -10,7 +11,7 @@ class UserIncomeCreate(BaseModel):
 
 class IncomeEventCreate(BaseModel):
     source_id: Optional[int] = None
-    event_type: str = Field(..., pattern="^(pay|bonus|rsu|other)$")
+    event_type: IncomeEventType
     gross_amount: Optional[Decimal] = None
     net_amount: Decimal
     region: str = Field(..., max_length=2)
