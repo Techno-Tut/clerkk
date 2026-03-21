@@ -1,31 +1,4 @@
-// Income Types
-export interface UserIncomeCreate {
-  gross_annual_estimate: number;
-}
-
-export interface IncomeEventCreate {
-  source_id?: number | null;
-  event_type: 'pay' | 'bonus' | 'rsu' | 'other';
-  gross_amount?: number | null;
-  net_amount: number;
-  region: string;
-  event_date: string;
-  notes?: string | null;
-}
-
-// Expense Types
-export interface ExpenseCreate {
-  category: string;
-  name: string;
-  amount: number;
-}
-
-export interface ExpenseUpdate {
-  amount: number;
-  reason?: string | null;
-}
-
-// API Response Types
+// API Response Types (not generated as named schemas)
 export interface ApiResponse {
   message: string;
 }

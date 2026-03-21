@@ -59,7 +59,12 @@ export function UserProvider({children}: {children: React.ReactNode}) {
       // Cache entire profile
       await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(userProfile));
 
-      setProfile(userProfile);
+      setProfile({
+        id: userProfile.user_id,
+        email: userProfile.email ?? '',
+        region: userProfile.region,
+        onboarding_completed: userProfile.onboarding_completed,
+      });
       setIsLoading(false);
     } catch (error) {
       console.error('Failed to load profile:', error);

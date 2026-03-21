@@ -19,24 +19,15 @@ import {useAuth0} from 'react-native-auth0';
 import {BlurView} from 'expo-blur';
 import {Currency} from '../components';
 import {api} from '../config/api';
+import type {components} from '../types/api-generated';
 import CurrencyInput from '../components/CurrencyInput';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 
 const MULTI_CURRENCY_KEY = '@clerkk_multi_currency';
 const CONVERT_DEBT_KEY = '@clerkk_convert_debt_to_local';
 
-type DebtType = 'credit_card' | 'mortgage' | 'loan' | 'line_of_credit';
-
-interface Debt {
-  id: string;
-  name: string;
-  type: DebtType;
-  currency: string;
-  monthly_payment: string;
-  current_balance: string;
-  interest_rate: string;
-  is_active: boolean;
-}
+type Debt = components['schemas']['DebtResponse'];
+type DebtType = components['schemas']['DebtType'];
 
 const DEBT_TYPES = [
   {value: 'credit_card', label: 'Credit Card', icon: 'card-outline'},
@@ -45,7 +36,11 @@ const DEBT_TYPES = [
   {value: 'line_of_credit', label: 'Line of Credit', icon: 'wallet-outline'},
 ];
 
-const CURRENCIES = [
+const CURRENCIES: {
+  value: components['schemas']['Currency'];
+  label: string;
+  symbol: string;
+}[] = [
   {value: 'CAD', label: 'CAD', symbol: '$'},
   {value: 'USD', label: 'USD', symbol: '$'},
   {value: 'INR', label: 'INR', symbol: '₹'},
@@ -65,7 +60,8 @@ export default function DebtScreen() {
 
   // Form state - Basic
   const [debtType, setDebtType] = useState<DebtType>('credit_card');
-  const [currency, setCurrency] = useState('CAD');
+  const [currency, setCurrency] =
+    useState<components['schemas']['Currency']>('CAD');
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('');
   const [monthlyPayment, setMonthlyPayment] = useState('');
@@ -504,6 +500,7 @@ export default function DebtScreen() {
               {/* Interest Rate */}
               <Text style={styles.inputLabel}>Interest Rate</Text>
               <CurrencyInput
+                currency=""
                 suffix="%"
                 value={interestRate}
                 onChangeText={setInterestRate}

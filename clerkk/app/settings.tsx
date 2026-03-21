@@ -102,6 +102,7 @@ export default function Settings() {
 
       for (const section of SETTINGS_CONFIG) {
         for (const item of section.items) {
+          if (!item.storageKey) continue;
           const value = await AsyncStorage.getItem(item.storageKey);
           if (item.type === 'toggle') {
             loadedSettings[item.id] =
@@ -182,7 +183,7 @@ export default function Settings() {
                           <Switch
                             value={settings[item.id] || false}
                             onValueChange={value =>
-                              updateSetting(item.id, value, item.storageKey)
+                              updateSetting(item.id, value, item.storageKey!)
                             }
                             trackColor={{false: '#E5E5EA', true: '#34C759'}}
                             thumbColor="#fff"

@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Keyboard,
   Animated,
+  KeyboardAvoidingView,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {Ionicons} from '@expo/vector-icons';
@@ -32,10 +33,11 @@ import AccountActionModal, {
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import Currency from '../components/Currency';
 import {useToast} from '../contexts/ToastContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const ACCOUNT_CONFIG: Record<
   string,
-  {icon: string; color: string; bgColor: string}
+  {icon: keyof typeof Ionicons.glyphMap; color: string; bgColor: string}
 > = {
   'Emergency Fund': {
     icon: 'alert-circle-outline',
@@ -81,8 +83,8 @@ export default function Home() {
   const [showAccountForm, setShowAccountForm] = useState(false);
   const swipeableRefs = useRef<{[key: string]: Swipeable | null}>({});
   const [paycheckAmount, setPaycheckAmount] = useState('');
-  const [paycheckDate, setPaycheckDate] = useState('Today');
-  const [paycheckSource, setPaycheckSource] = useState('');
+  const [paycheckDate, setPaycheckDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showSetLimitModal, setShowSetLimitModal] = useState(false);
   const [limitAmount, setLimitAmount] = useState('');
   const [limitYear, setLimitYear] = useState(
@@ -417,7 +419,9 @@ export default function Home() {
             return (
               <Swipeable
                 key={account.id}
-                ref={ref => (swipeableRefs.current[account.id] = ref)}
+                ref={ref => {
+                  swipeableRefs.current[account.id] = ref;
+                }}
                 renderRightActions={(progress, dragX) => {
                   const scale = dragX.interpolate({
                     inputRange: [-100, 0],
@@ -697,58 +701,87 @@ export default function Home() {
       </Modal>
 
       <Modal visible={showLogPaycheckModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <KeyboardAwareScrollView
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity
             style={{flex: 1}}
-            contentContainerStyle={{justifyContent: 'flex-end', flexGrow: 1}}
-          >
-            <TouchableOpacity
-              style={{flex: 1}}
-              activeOpacity={1}
-              onPress={() => setShowLogPaycheckModal(false)}
-            />
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Log Paycheck</Text>
-                <TouchableOpacity
-                  onPress={() => setShowLogPaycheckModal(false)}
-                >
-                  <Ionicons name="close" size={24} color="#000" />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Amount</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="$0.00"
-                keyboardType="numeric"
-                value={paycheckAmount}
-                onChangeText={setPaycheckAmount}
-              />
-              <Text style={styles.modalLabel}>Date</Text>
-              <TouchableOpacity style={styles.modalInput}>
-                <Text style={styles.modalInputText}>{paycheckDate}</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalLabel}>Source (optional)</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g., Tech Job"
-                value={paycheckSource}
-                onChangeText={setPaycheckSource}
-              />
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => {
-                  setPaycheckAmount('');
-                  setPaycheckDate('Today');
-                  setPaycheckSource('');
-                  setShowLogPaycheckModal(false);
-                }}
-              >
-                <Text style={styles.modalButtonText}>Log Paycheck</Text>
+            activeOpacity={1}
+            onPress={() => setShowLogPaycheckModal(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Log Paycheck</Text>
+              <TouchableOpacity onPress={() => setShowLogPaycheckModal(false)}>
+                <Ionicons name="close" size={24} color="#000" />
               </TouchableOpacity>
             </View>
-          </KeyboardAwareScrollView>
-        </View>
+            <Text style={styles.modalLabel}>Amount</Text>
+            <CurrencyInput
+              value={paycheckAmount}
+              onChangeText={setPaycheckAmount}
+              onFocus={() => setShowDatePicker(false)}
+              placeholder="0"
+            />
+            <Text style={styles.modalLabel}>Date</Text>
+            <TouchableOpacity
+              style={styles.modalInput}
+              onPress={() => {
+                Keyboard.dismiss();
+                setShowDatePicker(!showDatePicker);
+              }}
+            >
+              <Text style={styles.modalInputText}>
+                {paycheckDate.toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={paycheckDate}
+                mode="date"
+                display="inline"
+                maximumDate={new Date()}
+                accentColor="#4CAF50"
+                onChange={(_, date) => {
+                  if (date) setPaycheckDate(date);
+                }}
+              />
+            )}
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={async () => {
+                if (!paycheckAmount) return;
+                setShowLogPaycheckModal(false);
+                try {
+                  const creds = await getCredentials();
+                  await api.income.logEvent(
+                    {
+                      event_type: 'pay',
+                      net_amount: parseFloat(paycheckAmount),
+                      region: 'ON',
+                      event_date: paycheckDate.toISOString().split('T')[0],
+                    },
+                    creds.accessToken,
+                  );
+                  showToast('Paycheck logged');
+                  fetchStats();
+                } catch (e) {
+                  showToast('Failed to log paycheck', 'error');
+                }
+                setPaycheckAmount('');
+                setPaycheckDate(new Date());
+              }}
+            >
+              <Text style={styles.modalButtonText}>Log Paycheck</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={showAddAccountModal} transparent animationType="fade">

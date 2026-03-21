@@ -412,6 +412,11 @@ export interface components {
       /** Remaining Contribution Room */
       remaining_contribution_room?: string | null;
     };
+    /**
+     * Currency
+     * @enum {string}
+     */
+    Currency: 'CAD' | 'USD' | 'INR' | 'EUR';
     /** DashboardResponse */
     DashboardResponse: {
       /**
@@ -459,11 +464,8 @@ export interface components {
        * @description Annual rate (e.g., 3.5)
        */
       interest_rate: number | string;
-      /**
-       * Currency
-       * @default CAD
-       */
-      currency: string;
+      /** @default CAD */
+      currency: components['schemas']['Currency'];
       /** Original Principal */
       original_principal?: number | string | null;
       /** Term Months */
@@ -576,8 +578,7 @@ export interface components {
     IncomeEventCreate: {
       /** Source Id */
       source_id?: number | null;
-      /** Event Type */
-      event_type: string;
+      event_type: components['schemas']['IncomeEventType'];
       /** Gross Amount */
       gross_amount?: number | string | null;
       /** Net Amount */
@@ -592,6 +593,11 @@ export interface components {
       /** Notes */
       notes?: string | null;
     };
+    /**
+     * IncomeEventType
+     * @enum {string}
+     */
+    IncomeEventType: 'pay' | 'bonus' | 'rsu' | 'other';
     /** LedgerEventCreate */
     LedgerEventCreate: {
       event_type: components['schemas']['EventType'];

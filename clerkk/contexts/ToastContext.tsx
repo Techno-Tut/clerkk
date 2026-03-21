@@ -32,7 +32,7 @@ const SLIDE_DURATION = 250;
 export function ToastProvider({children}: {children: React.ReactNode}) {
   const [toast, setToast] = useState<Toast | null>(null);
   const translateY = useRef(new Animated.Value(-100)).current;
-  const timeout = useRef<ReturnType<typeof setTimeout>>();
+  const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const insets = useSafeAreaInsets();
 
   const showToast = useCallback(

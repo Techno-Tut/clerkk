@@ -25,12 +25,16 @@ export default function Welcome() {
     setLoading(true);
 
     try {
-      await authorize({
-        customScheme: 'com.clerkk.app',
-        scope: 'openid profile email',
-        connection: 'google-oauth2',
-        audience: 'https://api.inbriefs.com', // CRITICAL: Get JWT access token
-      });
+      await authorize(
+        {
+          scope: 'openid profile email',
+          connection: 'google-oauth2',
+          audience: 'https://api.inbriefs.com', // CRITICAL: Get JWT access token
+        },
+        {
+          customScheme: 'com.clerkk.app',
+        },
+      );
 
       const creds = await getCredentials();
 

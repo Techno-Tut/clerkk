@@ -1,8 +1,4 @@
 import type {
-  UserIncomeCreate,
-  IncomeEventCreate,
-  ExpenseCreate,
-  ExpenseUpdate,
   IncomeCreateResponse,
   IncomeEventResponse,
   ExpenseCreateResponse,
@@ -12,6 +8,11 @@ import type {
 import type {components} from '../types/api-generated';
 import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+type UserIncomeCreate = components['schemas']['UserIncomeCreate'];
+type IncomeEventCreate = components['schemas']['IncomeEventCreate'];
+type ExpenseCreate = components['schemas']['ExpenseCreate'];
+type ExpenseUpdate = components['schemas']['ExpenseUpdate'];
 
 type UserProfileResponse = components['schemas']['UserProfileResponse'];
 type OnboardingCompleteResponse =

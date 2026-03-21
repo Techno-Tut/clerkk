@@ -24,20 +24,23 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      await authorize({
-        customScheme: 'com.clerkk.app',
-        scope: 'openid profile email',
-        connection: 'google-oauth2',
-        audience: 'https://api.inbriefs.com',
-      });
+      await authorize(
+        {
+          scope: 'openid profile email',
+          connection: 'google-oauth2',
+          audience: 'https://api.inbriefs.com',
+        },
+        {
+          customScheme: 'com.clerkk.app',
+        },
+      );
 
       const creds = await getCredentials();
 
       // Submit onboarding data
       await api.user.submitOnboarding(onboardingData, creds.accessToken);
 
-      // Reset context and navigate
-      reset();
+      // Navigate to dashboard
       router.replace('/dashboard');
     } catch (e: any) {
       if (e.code === 'USER_CANCELLED' || e.name === 'USER_CANCELLED') {

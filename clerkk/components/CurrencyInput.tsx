@@ -13,11 +13,11 @@ export default function CurrencyInput({
   style,
   ...props
 }: CurrencyInputProps) {
-  const symbol = CURRENCY_SYMBOLS[currency] || '$';
+  const symbol = currency ? CURRENCY_SYMBOLS[currency] || '$' : '';
 
   return (
     <View style={styles.container}>
-      <Text style={styles.prefix}>{symbol}</Text>
+      {symbol && <Text style={styles.prefix}>{symbol}</Text>}
       <TextInput
         style={[styles.input, style]}
         keyboardType="decimal-pad"
